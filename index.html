@@ -736,10 +736,15 @@ const STATE = {
   lb: { all: false }
 };
 
+/* 공개 배포 도메인(github.io)에서는 이름 마스킹을 강제 고정합니다.
+   운영자 로컬(localhost·file)에서는 체크박스로 자유롭게 전환할 수 있습니다. */
+function isPublicHost(h) { return /\.github\.io$/i.test(String(h)); }
+const FORCE_MASK = isPublicHost(location.hostname);
+
 /* 화면에 표시할 이름 — 닉네임이 있으면 닉네임, 없으면 마스킹
    미리보기 모드에서는 가상 활동 기록이 실명과 붙지 않도록 항상 마스킹합니다. */
 function displayName(p) {
-  if (MODE === "preview" || STATE.hideNames) return p.nick || maskName(p.name);
+  if (MODE === "preview" || FORCE_MASK || STATE.hideNames) return p.nick || maskName(p.name);
   return p.name;
 }
 
@@ -1352,8 +1357,8 @@ function setMode(m) {
   }
   // 샘플 모드에서는 이름 마스킹을 강제하고 해제할 수 없게 잠급니다
   const hn = $("#hideNames");
-  hn.checked = (m === "preview") ? true : STATE.hideNames;
-  hn.disabled = (m === "preview");
+  hn.checked = (m === "preview" || FORCE_MASK) ? true : STATE.hideNames;
+  hn.disabled = (m === "preview" || FORCE_MASK);
   render();
   // 버튼이 innerHTML 교체로 사라지므로 새 버튼으로 포커스를 이어 줍니다
   $("#modeBox [data-mode]")?.focus();
@@ -1423,6 +1428,15 @@ function updateSimLabel() {
 async function init() {
   STATE.today = startOfDay(new Date());
   bindEvents();
+
+  // 공개 배포에서는 이름 마스킹을 항상 켠 채로 잠급니다
+  if (FORCE_MASK) {
+    STATE.hideNames = true;
+    const hn = $("#hideNames");
+    hn.checked = true;
+    hn.disabled = true;
+    hn.closest("label").title = "공개 페이지에서는 개인정보 보호를 위해 이름 마스킹이 항상 적용됩니다";
+  }
 
   if (MODE === "real") {
     $("#simbar").remove();
