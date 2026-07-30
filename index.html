@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 마에스트로 자율 스터디 대시보드</title>
+<style>
+/* ============================================================
+   디자인 토큰
+   - 색상은 dataviz 가이드의 검증된 팔레트를 사용
+   - 히트맵 내부는 초록/노랑/회색 조합만 사용 (적록색약 안전, CVD ΔE 11.3 PASS)
+   - 빨강(critical)은 히트맵 밖의 '이탈 위험' 배지에만 사용 + 항상 아이콘·라벨 동반
+   ============================================================ */
+:root {
+  color-scheme: light;
+  --page:            #f9f9f7;   /* 페이지 배경 */
+  --surface:         #fcfcfb;   /* 카드 표면 */
+  --surface-2:       #f2f2ee;   /* 살짝 눌린 표면 */
+  --ink:             #0b0b0b;   /* 본문 텍스트 */
+  --ink-2:           #52514e;   /* 보조 텍스트 */
+  --muted:           #898781;   /* 라벨·축 */
+  --line:            #e1e0d9;   /* 헤어라인 */
+  --border:          rgba(11,11,11,0.10);
+
+  --brand:           #184f95;   /* 포인트 컬러(부산대 네이비) — 크롬·단일계열 막대 */
+  --brand-soft:      #cde2fb;   /* 막대 트랙(같은 계열의 밝은 단계) */
+  --brand-ink:       #0d366b;
+
+  --good:            #0a7d0a;   /* 완료 — 흰색 ✓ 대비 5.3:1 확보를 위해 어둡게 (CVD 재검증 통과) */
+  --warning:         #fab219;   /* 마감 임박 미제출 */
+  --critical:        #d03b3b;   /* 이탈 위험 (히트맵 외부 전용) */
+  --neutral:         #c3c2b7;   /* 미제출(마감 지남) — 의도적 무채색 */
+  --neutral-soft:    #edece7;   /* 진행중 미제출 */
+
+  --cell-ink-on-good: #ffffff;
+  --cell-ink-on-warn: #3d2a00;
+  --cell-ink-on-neut: #4a4945;
+
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(11,11,11,0.04), 0 1px 8px rgba(11,11,11,0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:          #0d0d0d;
+    --surface:       #1a1a19;
+    --surface-2:     #232322;
+    --ink:           #ffffff;
+    --ink-2:         #c3c2b7;
+    --muted:         #898781;
+    --line:          #2c2c2a;
+    --border:        rgba(255,255,255,0.10);
+    --brand:         #3987e5;
+    --brand-soft:    #184f95;
+    --brand-ink:     #9ec5f4;
+    --neutral:       #6b6a64;
+    --neutral-soft:  #2c2c2a;
+    --cell-ink-on-neut: #f2f2ee;
+    --critical:      #ff8a80;   /* 다크 표면 대비 7.6:1 (기존 #d03b3b는 3.6:1로 AA 미달) */
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:          #0d0d0d;
+  --surface:       #1a1a19;
+  --surface-2:     #232322;
+  --ink:           #ffffff;
+  --ink-2:         #c3c2b7;
+  --muted:         #898781;
+  --line:          #2c2c2a;
+  --border:        rgba(255,255,255,0.10);
+  --brand:         #3987e5;
+  --brand-soft:    #184f95;
+  --brand-ink:     #9ec5f4;
+  --neutral:       #6b6a64;
+  --neutral-soft:  #2c2c2a;
+  --cell-ink-on-neut: #f2f2ee;
+  --critical:      #ff8a80;   /* 다크 표면 대비 7.6:1 */
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px 72px; }
+
+/* ---------- 상단 바 ---------- */
+header.topbar {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-in {
+  max-width: 1240px; margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.brandmark {
+  display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0;
+}
+.brandmark .dot {
+  width: 30px; height: 30px; border-radius: 8px; flex: none;
+  background: var(--brand); color: #fff;
+  display: grid; place-items: center; font-weight: 700; font-size: 13px;
+}
+.brandmark h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+.brandmark p  { font-size: 12px; margin: 0; color: var(--muted); }
+
+.chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.chip {
+  font-size: 12px; padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+  white-space: nowrap;
+}
+.chip b { color: var(--ink); font-weight: 650; }
+.chip.accent { border-color: color-mix(in srgb, var(--brand) 40%, transparent); color: var(--brand-ink); }
+
+.iconbtn {
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+  width: 34px; height: 34px; border-radius: 9px; cursor: pointer; font-size: 15px;
+  display: grid; place-items: center;
+}
+.iconbtn:hover { background: var(--surface-2); }
+
+/* ---------- 데모 배너 ---------- */
+.demo-banner {
+  margin: 18px 0 0; padding: 12px 14px; border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface));
+  color: var(--ink); font-size: 13px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.demo-banner .ic { flex: none; }
+.demo-banner b { font-weight: 650; }
+/* 정보 안내 배너(명단 확정·준비 중) — 경고와 구분되는 브랜드 톤 */
+.info-banner {
+  margin: 18px 0 0; padding: 12px 14px; border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--brand) 32%, var(--border));
+  background: color-mix(in srgb, var(--brand) 7%, var(--surface));
+  color: var(--ink); font-size: 13px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.info-banner .ic { flex: none; color: var(--brand); }
+.banner-btn {
+  margin-left: auto; flex: none; align-self: center;
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  padding: 6px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+}
+.banner-btn:hover { background: var(--surface-2); }
+.banner-btn.primary { background: var(--brand); color: #fff; border-color: transparent; }
+/* 샘플 모드에서 섹션마다 붙는 작은 표식 */
+.sample-tag {
+  font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--warning) 22%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  color: #6b4a00; white-space: nowrap;
+}
+:root[data-theme="dark"] .sample-tag { color: var(--warning); }
+
+/* 시점 시뮬레이터 */
+.simbar {
+  margin-top: 12px; padding: 12px 14px; border-radius: var(--radius);
+  border: 1px dashed var(--border); background: var(--surface);
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 13px;
+}
+.simbar label { color: var(--ink-2); font-weight: 600; white-space: nowrap; }
+.simbar input[type=range] { flex: 1; min-width: 200px; accent-color: var(--brand); }
+.simbar output { font-variant-numeric: tabular-nums; font-weight: 650; min-width: 96px; }
+
+/* ---------- 섹션 ---------- */
+section { margin-top: 34px; }
+.sec-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.sec-head h2 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+.sec-head p  { font-size: 13px; margin: 0; color: var(--muted); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+
+/* ---------- KPI 타일 ---------- */
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.kpi { padding: 16px 18px; }
+.kpi .lab { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.kpi .val { font-size: 30px; font-weight: 680; letter-spacing: -0.02em; margin-top: 2px; }
+.kpi.hero .val { font-size: 50px; line-height: 1.05; }
+.kpi .val .u { font-size: 0.5em; font-weight: 600; color: var(--ink-2); margin-left: 2px; }
+.kpi .sub { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+/* 미터: 채움은 상태, 트랙은 같은 계열의 밝은 단계 */
+.meter { height: 8px; border-radius: 999px; background: var(--brand-soft); overflow: hidden; margin-top: 10px; }
+.meter > i { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
+.kpi.risk .val { color: var(--critical); }
+
+/* ---------- 필터 줄 ---------- */
+.filters {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+.filters select, .filters input[type=search] {
+  font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+}
+.filters .spacer { margin-left: auto; }
+.toggle {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2);
+  cursor: pointer; user-select: none;
+}
+
+/* ---------- 히트맵 ---------- */
+.hm-scroll { overflow-x: auto; padding: 4px 14px 16px; }
+.hm { display: grid; gap: 2px; min-width: 720px; }           /* 2px 표면 간격 = 유일한 구분선 */
+.hm-row { display: grid; grid-template-columns: 176px repeat(8, minmax(52px, 1fr)) 78px; gap: 2px; }
+.hm-head .hcell {
+  font-size: 11.5px; color: var(--muted); font-weight: 650; text-align: center;
+  padding: 6px 2px 8px; line-height: 1.25;
+}
+.hm-head .hcell small { display: block; font-weight: 500; font-variant-numeric: tabular-nums; }
+.hm-head .hcell.cur { color: var(--brand-ink); }
+.name-cell {
+  display: flex; align-items: center; gap: 8px; padding: 0 8px;
+  font-size: 13px; border-radius: 8px; cursor: pointer; background: var(--surface-2);
+  min-height: 34px; text-align: left; border: none; color: var(--ink); font-family: inherit;
+}
+.name-cell:hover { outline: 2px solid var(--brand); outline-offset: -2px; }
+.name-cell .no { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; width: 16px; }
+/* 말줄임은 블록 컨테이너에 걸어야 동작합니다 (인라인 span에는 적용되지 않음) */
+.name-cell .who2 { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.name-cell .nm { font-weight: 600; }
+.name-cell .dp { font-size: 11px; color: var(--muted); }
+
+.cell {
+  min-height: 34px; border-radius: 8px; display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; cursor: default; position: relative;
+}
+.cell.done   { background: var(--good);        color: var(--cell-ink-on-good); }
+.cell.imm    { background: var(--warning);     color: var(--cell-ink-on-warn); }
+.cell.missed { background: var(--neutral);     color: var(--cell-ink-on-neut); }
+.cell.open   { background: var(--neutral-soft); color: var(--muted); }
+.cell.future { background: transparent; box-shadow: inset 0 0 0 1px var(--line); color: transparent; }
+.cell:hover:not(.future) { outline: 2px solid var(--ink); outline-offset: -2px; }
+.rate-cell {
+  display: grid; place-items: center; font-size: 12.5px; font-weight: 650;
+  font-variant-numeric: tabular-nums; color: var(--ink-2);
+}
+.rate-cell .warn { color: var(--critical); }
+
+/* 범례 */
+.legend { display: flex; gap: 16px; flex-wrap: wrap; padding: 0 14px 14px; font-size: 12.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i {
+  width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center;
+  font-size: 11px; font-weight: 700; font-style: normal;
+}
+.lg-done{background:var(--good);color:var(--cell-ink-on-good)}
+.lg-imm{background:var(--warning);color:var(--cell-ink-on-warn)}
+.lg-miss{background:var(--neutral);color:var(--cell-ink-on-neut)}
+.lg-open{background:var(--neutral-soft);color:var(--muted)}
+.lg-fut{box-shadow:inset 0 0 0 1px var(--line)}
+
+/* 툴팁 */
+#tip {
+  position: fixed; z-index: 90; pointer-events: none; opacity: 0;
+  transition: opacity .12s; max-width: 280px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.18); padding: 10px 12px; font-size: 12.5px;
+}
+#tip .t { font-weight: 650; margin-bottom: 2px; }
+#tip .r { color: var(--ink-2); }
+
+/* ---------- 미션 카드 ---------- */
+.missions { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); }
+.mcard { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.mcard .top { display: flex; align-items: center; gap: 8px; }
+.mcard .rd {
+  font-size: 11px; font-weight: 700; color: var(--brand-ink);
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  padding: 2px 8px; border-radius: 999px; flex: none;
+}
+.mcard .dd { margin-left: auto; font-size: 11.5px; font-weight: 650; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mcard .dd.soon { color: #8a5a00; }
+:root[data-theme="dark"] .mcard .dd.soon { color: var(--warning); }
+.mcard h3 { font-size: 14px; margin: 2px 0 0; font-weight: 650; line-height: 1.35; }
+.mcard .out { font-size: 12px; color: var(--muted); }
+.mcard .stat { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
+.mcard .stat b { font-size: 20px; font-weight: 680; font-variant-numeric: tabular-nums; }
+.mcard .stat span { font-size: 12px; color: var(--ink-2); }
+.mcard.is-cur { outline: 2px solid color-mix(in srgb, var(--brand) 55%, transparent); outline-offset: -1px; }
+.mcard.is-fut { opacity: .62; }
+
+/* ---------- 위험 알림 ---------- */
+.risk-box { padding: 14px 16px; border-color: color-mix(in srgb, var(--critical) 35%, var(--border)); }
+.risk-list { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin-top: 10px; }
+.risk-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
+  background: color-mix(in srgb, var(--critical) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--critical) 28%, transparent);
+  font-size: 13px; cursor: pointer; text-align: left; font-family: inherit; color: var(--ink);
+}
+.risk-item .ic { color: var(--critical); font-size: 14px; flex: none; }
+.risk-item .nm { font-weight: 650; }
+.risk-item .dt { color: var(--ink-2); font-size: 12px; margin-left: auto; }
+.ok-note { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.ok-note .ic { color: var(--good); }
+
+/* ---------- 리더보드 ---------- */
+.lb { padding: 6px 0 8px; }
+.lb-row {
+  display: grid; grid-template-columns: 34px 1fr auto auto; gap: 12px; align-items: center;
+  padding: 9px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px;
+  /* button 요소로 렌더링되므로 기본 버튼 스타일을 지웁니다 */
+  width: 100%; text-align: left; background: none; border-left: none; border-right: none;
+  border-top: none; font-family: inherit; color: var(--ink); cursor: pointer;
+}
+.lb-row:hover { background: var(--surface-2); }
+.lb-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.lb-row:last-child { border-bottom: none; }
+.lb-row .rk { font-weight: 700; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.lb-row.top1 .rk, .lb-row.top2 .rk, .lb-row.top3 .rk { color: var(--brand); }
+.lb-row .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lb-row .who .nm { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-row .badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.badge {
+  font-size: 10.5px; font-weight: 650; padding: 2px 7px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--ink-2); background: var(--surface-2); white-space: nowrap;
+}
+.badge.g { color: #0a6d0a; background: color-mix(in srgb, var(--good) 12%, var(--surface)); border-color: color-mix(in srgb, var(--good) 30%, transparent); }
+:root[data-theme="dark"] .badge.g { color: #7fdc7f; }
+.badge.b { color: var(--brand-ink); background: color-mix(in srgb, var(--brand) 12%, var(--surface)); border-color: color-mix(in srgb, var(--brand) 30%, transparent); }
+.lb-row .pt { font-weight: 680; font-variant-numeric: tabular-nums; }
+.lb-row .pt small { font-weight: 500; color: var(--muted); font-size: 11px; margin-left: 2px; }
+
+/* ---------- 표 보기 ---------- */
+details.tableview { margin-top: 14px; }
+details.tableview > summary {
+  cursor: pointer; font-size: 13px; color: var(--ink-2); padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  list-style: none;
+}
+details.tableview > summary::-webkit-details-marker { display: none; }
+details.tableview > summary::before { content: "▸ "; color: var(--muted); }
+details[open].tableview > summary::before { content: "▾ "; }
+.tbl-scroll { overflow-x: auto; margin-top: 10px; }
+table.data { border-collapse: collapse; width: 100%; font-size: 12.5px; background: var(--surface); }
+table.data th, table.data td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+table.data th { color: var(--muted); font-weight: 650; font-size: 11.5px; position: sticky; top: 0; background: var(--surface); }
+table.data td:nth-child(2) { text-align: left; font-weight: 600; }
+table.data td:nth-child(3) { text-align: left; color: var(--ink-2); }
+table.data td.n { font-variant-numeric: tabular-nums; }
+
+/* ---------- 상세 패널 ---------- */
+#drawer {
+  position: fixed; inset: 0; z-index: 80; display: none;
+}
+#drawer.on { display: block; }
+#drawer .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.36); }
+#drawer .panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(460px, 100%);
+  background: var(--surface); border-left: 1px solid var(--border);
+  overflow-y: auto; padding: 20px 22px 40px;
+}
+#drawer .panel h3 { margin: 0; font-size: 19px; font-weight: 680; }
+#drawer .panel .dept { color: var(--muted); font-size: 13px; }
+#drawer .close {
+  position: absolute; top: 14px; right: 16px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+  width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+}
+.d-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 4px; }
+.d-stats > div { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.d-stats .l { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.d-stats .v { font-size: 19px; font-weight: 680; font-variant-numeric: tabular-nums; }
+.d-list { margin-top: 16px; display: grid; gap: 8px; }
+.d-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 13px; }
+.d-item .st { flex: none; width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; font-size: 11px; font-weight: 700; margin-top: 1px; }
+.d-item .bd { min-width: 0; }
+.d-item .ti { font-weight: 620; }
+.d-item .me { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.d-item a { color: var(--brand); font-size: 12px; word-break: break-all; }
+
+footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (max-width: 640px) {
+  .kpi.hero .val { font-size: 38px; }
+  .d-stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brandmark">
+      <div class="dot">AI</div>
+      <div>
+        <h1>AI 마에스트로 · 자율 스터디 현황</h1>
+        <p>2026. 8. 24.(월) ~ 10. 15.(목) · 부산대학교</p>
+      </div>
+    </div>
+    <div class="chips" id="topChips"></div>
+    <button class="iconbtn" id="themeBtn" title="라이트/다크 전환" aria-label="라이트/다크 전환">◐</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 모드 안내 배너 — JS가 현재 모드(roster / preview / real)에 맞춰 채웁니다 -->
+  <div id="modeBox" role="status" aria-live="polite"></div>
+
+  <div class="simbar" id="simbar" hidden>
+    <label for="simRange">시점 시뮬레이션</label>
+    <input type="range" id="simRange" min="0" max="67" value="42">
+    <output id="simOut"></output>
+    <span class="chip" id="simPhase"></span>
+  </div>
+
+  <!-- ① KPI -->
+  <section>
+    <div class="sec-head">
+      <h2>전체 현황</h2>
+      <p>오늘 날짜와 미션 마감일을 비교해 자동 계산됩니다</p>
+      <span class="sample-tag" data-sample hidden>샘플 데이터</span>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <!-- ② 히트맵 -->
+  <section>
+    <div class="sec-head">
+      <h2>마에스트로 × 미션 현황</h2>
+      <p>칸에 마우스를 올리면 상세, 이름을 누르면 개인 카드가 열립니다</p>
+      <span class="sample-tag" data-sample hidden>샘플 데이터 · 이름 마스킹</span>
+    </div>
+    <div class="card filters">
+      <select id="fDept"><option value="">전체 부서</option></select>
+      <select id="fSort">
+        <option value="no">기본 순서</option>
+        <option value="rate">완료율 높은 순</option>
+        <option value="rateAsc">완료율 낮은 순</option>
+        <option value="score">점수 높은 순</option>
+        <option value="name">이름순</option>
+      </select>
+      <input type="search" id="fName" placeholder="이름 검색" style="width:130px">
+      <span class="spacer"></span>
+      <label class="toggle" title="공개 화면에 띄울 때 실명을 가립니다 (예: 홍길동 → 홍*동)">
+        <input type="checkbox" id="hideNames"> 이름 마스킹</label>
+      <label class="toggle"><input type="checkbox" id="fRiskOnly"> 이탈 위험만</label>
+    </div>
+    <div class="card">
+      <div class="hm-scroll"><div class="hm" id="hm"></div></div>
+      <div class="legend" id="legend">
+        <span><i class="lg-done">✓</i> 완료</span>
+        <span><i class="lg-imm">!</i> 마감 임박 · 미제출</span>
+        <span><i class="lg-miss">✕</i> 미제출 (마감 지남)</span>
+        <span><i class="lg-open">·</i> 진행 중</span>
+        <span><i class="lg-fut"></i> 예정</span>
+      </div>
+    </div>
+    <details class="tableview">
+      <summary>표로 보기 (색 없이 읽기 · 화면 낭독기용)</summary>
+      <div class="tbl-scroll" id="tableWrap"></div>
+    </details>
+  </section>
+
+  <!-- ③ 미션별 현황 -->
+  <section>
+    <div class="sec-head">
+      <h2>미션별 제출 현황</h2>
+      <p>총 8개 과제 · 마감일 기준</p>
+      <span class="sample-tag" data-sample hidden>샘플 데이터</span>
+    </div>
+    <div class="missions" id="missions"></div>
+  </section>
+
+  <!-- ④ 이탈 위험 -->
+  <section>
+    <div class="sec-head">
+      <h2>집중 관리 대상</h2>
+      <p>최근 2개 회차 연속 미제출 시 자동 표시</p>
+      <span class="sample-tag" data-sample hidden>샘플 데이터 · 실제 미제출 기록 아님</span>
+    </div>
+    <div class="card risk-box" id="riskBox"></div>
+  </section>
+
+  <!-- ⑤ 리더보드 -->
+  <section>
+    <div class="sec-head">
+      <h2>참여 리더보드</h2>
+      <p>제출 10점 · 부서 스터디 운영 5점 · 함께한 동료 1명당 1점</p>
+      <span class="sample-tag" data-sample hidden>샘플 데이터</span>
+    </div>
+    <div class="card filters" style="margin-bottom:12px">
+      <span style="font-size:12.5px;color:var(--muted)">닉네임이 있으면 닉네임, 없으면 마스킹된 이름으로 표시됩니다</span>
+      <span class="spacer"></span>
+      <label class="toggle"><input type="checkbox" id="lbAll"> 21명 전체 보기</label>
+    </div>
+    <div class="card lb" id="lb"></div>
+  </section>
+
+  <footer class="foot">
+    <div>AI 마에스트로 자율 스터디 대시보드 · 성과 공유회 2026. 10. 30.(금) 14:00 대학본부 본관 3층 대강당</div>
+    <div id="footUpdated" style="margin-top:4px"></div>
+  </footer>
+</div>
+
+<div id="tip" role="tooltip"></div>
+
+<div id="drawer" aria-hidden="true">
+  <div class="scrim" data-close></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-label="참가자 상세">
+    <button class="close" data-close aria-label="닫기">✕</button>
+    <div id="drawerBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1. 설정 — 실제 데이터로 바꿀 때 이 블록만 수정하세요
+
+   ● 넣을 URL 형식 (gviz CSV):
+     https://docs.google.com/spreadsheets/d/<시트ID>/gviz/tq?tqx=out:csv&gid=<탭gid>
+     Apps Script(setup.gs)를 실행하면 이 URL 두 개를 로그로 출력해 줍니다.
+
+   ● 시트 공유 설정: [공유] > 일반 액세스 > "링크가 있는 모든 사용자" + 역할 "뷰어"
+     '웹에 게시'는 필요 없습니다. (게시 CSV는 최대 5분 캐시되어 실시간성이 떨어집니다)
+
+   ● 중요: 이 파일을 더블클릭해서 file:// 로 열면 브라우저 CORS 정책 때문에
+     구글 시트를 읽을 수 없습니다. 로컬 서버나 GitHub Pages 등 http(s)로 열어야 합니다.
+       python -m http.server 8000     → http://localhost:8000/index.html
+     (명단만 확인하는 용도라면 file:// 로 열어도 됩니다)
+   ============================================================ */
+const CONFIG = {
+  PARTICIPANTS_CSV: "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&gid=0",           // 명단 탭
+  SUBMISSIONS_CSV : "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&gid=850321703",   // 제출 탭
+  REFRESH_MS      : 60000,
+  PEER_TARGET     : 79,   // 성과공유회 기준 부서 참여 인원 목표
+  START_DATE      : "2026-08-24",
+  SHOWCASE_DATE   : "2026-10-30",
+  IMMINENT_DAYS   : 3     // 마감 N일 이내면 '임박'
+};
+
+/* 동작 모드
+   real    : 구글 시트 두 개가 모두 연결된 상태 — 실제 제출 데이터를 읽어 표시
+   roster  : 시트 미연결 — 확정 명단만 표시하고 제출 현황은 '아직 없음'(사실 그대로)
+   preview : 화면 설계 확인용 샘플 활동 데이터. 실명 대신 마스킹된 이름을 씁니다.
+             (가상의 미제출·이탈위험 기록이 실명 옆에 붙어 실제 기록으로 오해되는 것을 막기 위함) */
+const HAS_SHEETS = !!(CONFIG.PARTICIPANTS_CSV && CONFIG.SUBMISSIONS_CSV);
+let MODE = HAS_SHEETS ? "real" : "roster";
+
+/* ============================================================
+   2. 미션 정의 — 운영 일정 안내 문서의 8개 과제를 그대로 내장
+   ============================================================ */
+const MISSIONS = [
+  { round:1, due:"2026-08-28", title:"내 업무용 Skill 개선", output:"Skill v2 + 적용 전후 기록",
+    desc:"1주차에 만든 Skill v1을 한 단계 발전시켜 실제 업무 1건에 적용한 뒤 전후 차이를 기록" },
+  { round:2, due:"2026-09-04", title:"엑셀 대시보드 만들기", output:"raw data 자동연동 대시보드",
+    desc:"부서 raw data 기반 엑셀 대시보드 1개 제작. 데이터가 바뀌면 피벗·차트가 자동 갱신되도록 구성" },
+  { round:3, due:"2026-09-11", title:"작은 업무 에이전트 시제품", output:"에이전트 + Padlet 공유",
+    desc:"작은 반복 업무 1건을 수행하는 에이전트 제작. 완성도보다 시도가 중요, 시행착오를 Padlet에 공유" },
+  { round:4, due:"2026-09-18", title:"문서 작성 에이전트 + 서브에이전트·Skill", output:"문서 작성 에이전트",
+    desc:"서브 에이전트와 Skill을 조합해 문서 작성 에이전트 제작. 작업 분할·재사용 Skill을 함께 공유" },
+  { round:5, due:"2026-09-23", title:"공시자료 분석 에이전트 보완", output:"부서장 시연 가능 수준",
+    desc:"수업에서 만든 부서 공시자료 분석 에이전트(v0.5)를 다듬어 부서장에게 보여줄 수준으로 완성" },
+  { round:6, due:"2026-10-01", title:"GAS 자동화 앱 1개 배포", output:"배포된 GAS 앱 1개",
+    desc:"최소 기능만 담은 GAS 자동화 앱 1개를 개발·배포. 실제로 한 번 사용해볼 수 있는 상태까지" },
+  { round:7, due:"2026-10-08", title:"나만의 에이전트 다듬기", output:"확실히 동작하는 한 기능",
+    desc:"전체를 완성하려 하지 말고 잘 동작하는 한 부분이라도 확실하게 완성" },
+  { round:8, due:"2026-10-15", title:"AI Agent 도입 가능성 검토 및 확장 토의", output:"도입 검토 + 확장 아이디어 2~3개",
+    desc:"부서 또는 대학 행정에 실제 도입 가능성을 검토하고 확장 아이디어 2~3개를 정리해 동료와 토의" }
+];
+
+/* ============================================================
+   3-1. 확정 명단 (실제 데이터)
+   출처: 「추천선발 직원 명단v3.0.xlsx」 · AI 마에스트로 선발 명단 21명
+   이메일·닉네임은 원본에 없어 비어 있습니다. 구글 시트 참가자 탭에서 채우면
+   상세 패널과 리더보드에 자동 반영됩니다.
+   ============================================================ */
+const ROSTER = [
+  { no: 1,  name:"장성빈", dept:"교무과",           email:"", nick:"" },
+  { no: 2,  name:"김승혁", dept:"교수학습지원센터", email:"", nick:"" },
+  { no: 3,  name:"홍지섭", dept:"성과관리센터",     email:"", nick:"" },
+  { no: 4,  name:"박효진", dept:"대학원혁신실",     email:"", nick:"" },
+  { no: 5,  name:"이상대", dept:"총무과",           email:"", nick:"" },
+  { no: 6,  name:"지수현", dept:"학생과",           email:"", nick:"" },
+  { no: 7,  name:"최은주", dept:"취업전략과",       email:"", nick:"" },
+  { no: 8,  name:"조건",   dept:"정보화기획운영과", email:"", nick:"" },
+  { no: 9,  name:"김근수", dept:"연구진흥과",       email:"", nick:"" },
+  { no: 10, name:"김상현", dept:"재무과",           email:"", nick:"" },
+  { no: 11, name:"이동욱", dept:"시설과",           email:"", nick:"" },
+  { no: 12, name:"박진형", dept:"입학과",           email:"", nick:"" },
+  { no: 13, name:"이동현", dept:"국제협력실",       email:"", nick:"" },
+  { no: 14, name:"노은유", dept:"AX혁신과",         email:"", nick:"" },
+  { no: 15, name:"김정목", dept:"정보화기획운영과", email:"", nick:"" },
+  { no: 16, name:"진한룡", dept:"정보개발과",       email:"", nick:"" },
+  { no: 17, name:"송재학", dept:"정보운영과",       email:"", nick:"" },
+  { no: 18, name:"손환희", dept:"교육혁신실",       email:"", nick:"" },
+  { no: 19, name:"박채언", dept:"에듀테크센터",     email:"", nick:"" },
+  { no: 20, name:"박정우", dept:"캠퍼스기획과",     email:"", nick:"" },
+  { no: 21, name:"송륜화", dept:"학사과",           email:"", nick:"" }
+];
+
+/* ============================================================
+   3-2. 미리보기용 샘플 활동 — 전부 가상. 실제 제출 기록이 아닙니다.
+   미리보기 모드에서만 사용되며, 이때 이름은 자동 마스킹됩니다.
+   패턴 8자리: 1=제출, 0=미제출 / 마지막 숫자=부서 스터디 동료 수
+   ============================================================ */
+const SAMPLE_PATTERN = [
+  ["11111111",3], ["11101111",4], ["11110111",3], ["10111011",4],
+  ["11111011",4], ["11110011",3], ["11111111",5], ["01111111",2],
+  ["11011011",5], ["11111111",3], ["10100011",2], ["11111111",5],
+  ["11111111",6], ["11111101",4], ["11110111",3], ["11011111",4],
+  ["10111111",4], ["11000011",2], ["11111011",3], ["11101111",4],
+  ["11111111",4]
+];
+
+function buildSample() {
+  const submissions = [];
+  ROSTER.forEach((p, idx) => {
+    const [pattern, peers] = SAMPLE_PATTERN[idx] || ["", 0];
+    pattern.split("").forEach((ch, i) => {
+      if (ch !== "1") return;
+      const m = MISSIONS[i];
+      // 마감 0~6일 전 사이로 제출 시각을 분산(결정적) — 일찍 내는 사람도 섞이게
+      const d = addDays(parseDate(m.due), -((p.no * 3 + i * 5) % 7));
+      d.setHours(19 + ((p.no + i) % 4), 5 + (p.no % 50), 0, 0);
+      submissions.push({
+        ts: d,
+        name: p.name,
+        round: m.round,
+        link: "https://example.com/sample/" + m.round + "/" + p.no,
+        deptStudy: ((p.no + i) % 7 === 3) ? "아니오" : "예",   // 대부분 운영, 일부 미운영
+        peers: Math.max(1, peers - ((m.round % 3 === 0) ? 1 : 0)),
+        note: ""
+      });
+    });
+  });
+  return submissions;
+}
+
+/* 이름 마스킹 — 미리보기 모드와 '실명 숨기기' 옵션에서 사용
+   예: 홍길동 → 홍*동 / 두 글자 이름은 홍* */
+function maskName(n) {
+  const s = String(n || "").trim();
+  if (s.length <= 1) return s;
+  if (s.length === 2) return s[0] + "*";
+  return s[0] + "*".repeat(s.length - 2) + s[s.length - 1];
+}
+
+/* ============================================================
+   4. 유틸 — 날짜 / CSV
+   ============================================================ */
+function parseDate(s) {                     // 'YYYY-MM-DD' → 로컬 자정 Date
+  const [y, m, d] = String(s).trim().slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function dayDiff(a, b) { return Math.round((startOfDay(a) - startOfDay(b)) / 86400000); }
+function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function fmtMD(d)  { return (d.getMonth() + 1) + "/" + d.getDate(); }
+function fmtFull(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function fmtDateTime(d) {
+  return fmtFull(d) + " " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+function pct(a, b) { return b > 0 ? Math.round(a / b * 100) : 0; }
+function maskEmail(e) {
+  if (!e || !e.includes("@")) return "—";
+  const [id, dom] = e.split("@");
+  return id.slice(0, Math.min(3, id.length)) + "***@" + dom;
+}
+// 따옴표·쉼표·개행을 안전하게 처리하는 CSV 파서
+function parseCSV(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i+1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else {
+      if (c === '"') q = true;
+      else if (c === ",") { row.push(cell); cell = ""; }
+      else if (c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+      else if (c !== "\r") cell += c;
+    }
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(v => String(v).trim() !== ""));
+}
+/* 헤더 이름 별칭 — 구글 폼/시트가 로케일·문구에 따라 다르게 쓰는 열 이름을 하나로 모읍니다.
+   (예: 한국어 계정은 '타임스탬프', 영어 계정은 'Timestamp') */
+const HEADER_ALIAS = {
+  // 첫 열 이름은 계정 로케일에 따라 다르고, 한국어 표기도 자료마다 흔들립니다
+  "timestamp": "타임스탬프", "타임스탬프": "타임스탬프", "타임스탐프": "타임스탬프",
+  "응답시간": "타임스탬프", "제출시각": "타임스탬프",
+  "이름": "이름", "성명": "이름", "name": "이름",
+  "부서": "부서", "소속": "부서", "부서명": "부서",
+  "회차": "회차", "주차": "회차", "미션": "회차", "미션회차": "회차",
+  "제출링크": "제출링크", "링크": "제출링크", "결과물링크": "제출링크", "산출물링크": "제출링크",
+  "부서스터디운영": "부서스터디운영", "부서스터디": "부서스터디운영", "스터디운영": "부서스터디운영",
+  "함께한동료수": "함께한동료수", "동료수": "함께한동료수", "참여동료수": "함께한동료수",
+  "이메일": "이메일", "email": "이메일", "교내이메일": "이메일",
+  "닉네임": "닉네임", "번호": "번호", "no": "번호", "비고": "비고"
+};
+function normHeader(h) {
+  // BOM 제거(구글 CSV는 앞에 ﻿를 붙입니다) + 공백·괄호 설명 제거 후 별칭 조회
+  const raw = String(h ?? "").replace(/^﻿/, "").trim();
+  const key = raw.toLowerCase().replace(/\s+/g, "").replace(/\(.*?\)/g, "");
+  return HEADER_ALIAS[key] || raw;
+}
+function csvToObjects(text) {
+  const rows = parseCSV(text.replace(/^﻿/, ""));
+  if (!rows.length) return [];
+  // gviz CSV는 시트 그리드 전체 폭을 내보내므로 헤더가 빈 열이 뒤에 붙습니다 — 버립니다
+  const head = rows[0].map(normHeader);
+  const keep = head.map((h, i) => (h ? i : -1)).filter(i => i >= 0);
+  return rows.slice(1).map(r => {
+    const o = {};
+    keep.forEach(i => { const h = head[i]; if (!(h in o)) o[h] = (r[i] ?? "").trim(); });
+    return o;
+  }).filter(o => Object.values(o).some(v => v !== ""));   // 빈 행 제거
+}
+
+/* ============================================================
+   5. 상태
+   ============================================================ */
+const STATE = {
+  participants: [], submissions: [],
+  today: null, lastFetch: null,
+  hideNames: false,                 // 공개 화면용 이름 마스킹 (미리보기 모드에서는 강제 적용)
+  filters: { dept: "", sort: "no", name: "", riskOnly: false },
+  lb: { all: false }
+};
+
+/* 화면에 표시할 이름 — 닉네임이 있으면 닉네임, 없으면 마스킹
+   미리보기 모드에서는 가상 활동 기록이 실명과 붙지 않도록 항상 마스킹합니다. */
+function displayName(p) {
+  if (MODE === "preview" || STATE.hideNames) return p.nick || maskName(p.name);
+  return p.name;
+}
+
+// 데모 시점 슬라이더 범위: 스터디 시작(8/24) ~ 성과공유회(10/30)
+const SIM_START = parseDate("2026-08-24");
+const SIM_MAX   = dayDiff(parseDate(CONFIG.SHOWCASE_DATE), SIM_START);
+
+/* ============================================================
+   6. 계산 로직
+   ============================================================ */
+// 스터디 시작 전이면 모든 회차가 '예정' — 시작도 안 한 미션을 '진행 중'으로 표시하지 않기 위함
+function isBeforeStart(today) { return dayDiff(parseDate(CONFIG.START_DATE), today) > 0; }
+
+function computeMissions(today) {
+  const before = isBeforeStart(today);
+  let currentIdx = before ? -1 : MISSIONS.findIndex(m => dayDiff(parseDate(m.due), today) >= 0);
+  if (currentIdx === -1 && !before) currentIdx = MISSIONS.length; // 전 회차 마감 완료
+  return MISSIONS.map((m, i) => {
+    const due = parseDate(m.due);
+    const dd = dayDiff(due, today);
+    let phase;
+    if (before) phase = "future";
+    else if (dd < 0) phase = "past";
+    else if (i === currentIdx) phase = "current";
+    else phase = "future";
+    return { ...m, dueDate: due, dday: dd, phase, imminent: phase === "current" && dd <= CONFIG.IMMINENT_DAYS };
+  });
+}
+
+function computeAll() {
+  const today = STATE.today;
+  const missions = computeMissions(today);
+  const passedCount = missions.filter(m => m.phase === "past").length;   // 마감이 지난 회차 수
+  const current = missions.find(m => m.phase === "current") || null;
+
+  // 이름 → 회차 → 제출
+  // 이름은 정규화 키로 매칭하고('장 성빈' = '장성빈'), 같은 회차 중복 제출은
+  // 시트 행 순서가 아니라 '가장 이른 타임스탬프'를 채택합니다.
+  const byName = new Map();
+  const rosterKeys = new Set(STATE.participants.map(p => nameKey(p.name)));
+  const unmatched = new Map();                     // 명단에 없는 이름으로 들어온 제출
+  STATE.submissions.forEach(s => {
+    if (s.ts && dayDiff(s.ts, today) > 0) return;  // 아직 도래하지 않은 제출(시뮬레이션용)
+    const key = nameKey(s.name);
+    if (!rosterKeys.has(key)) {                    // 조용히 버리지 않고 따로 집계해 배너로 알림
+      unmatched.set(s.name, (unmatched.get(s.name) || 0) + 1);
+      return;
+    }
+    if (!byName.has(key)) byName.set(key, new Map());
+    const mp = byName.get(key);
+    const prev = mp.get(s.round);
+    // 타임스탬프가 없는 건은 기존 건을 밀어내지 않음
+    if (!prev || (s.ts && prev.ts && s.ts < prev.ts) || (s.ts && !prev.ts)) mp.set(s.round, s);
+  });
+
+  const rows = STATE.participants.map(p => {
+    const subs = byName.get(nameKey(p.name)) || new Map();
+    const cells = missions.map(m => {
+      const s = subs.get(m.round);
+      let state;
+      if (s) state = "done";
+      else if (m.phase === "past") state = "missed";
+      else if (m.phase === "current") state = m.imminent ? "imm" : "open";
+      else state = "future";
+      return { mission: m, sub: s || null, state };
+    });
+    const doneInPassed = missions.filter(m => m.phase === "past" && subs.has(m.round)).length;
+    // 유효 회차(1~8)로만 집계 — 범위 밖 값이 점수·뱃지에 새어들지 않도록 히트맵과 기준을 통일
+    const doneTotal = missions.filter(m => subs.has(m.round)).length;
+    // 마감된 회차가 없으면 완료율은 0%가 아니라 '아직 계산할 수 없음'(null)
+    const rate = passedCount ? pct(doneInPassed, passedCount) : null;
+    const deptStudyCount = [...subs.values()].filter(s => isYes(s.deptStudy)).length;
+    const peerMax = [...subs.values()].reduce((a, s) => Math.max(a, Number(s.peers) || 0), 0);
+    const score = doneTotal * 10 + deptStudyCount * 5 + peerMax;
+
+    // 이탈 위험: 마감 지난 최근 2개 회차 연속 미제출 (마감 2회차 미만이면 판정 보류)
+    const lastTwo = missions.filter(m => m.phase === "past").slice(-2);
+    const atRisk = lastTwo.length === 2 && lastTwo.every(m => !subs.has(m.round));
+
+    const badges = [];
+    if (passedCount > 0 && doneInPassed === passedCount) badges.push({ t: "개근", c: "g" });
+    if (doneTotal === MISSIONS.length) badges.push({ t: "올클리어", c: "g" });
+    if (peerMax >= 5) badges.push({ t: "확산 " + peerMax + "명", c: "b" });
+
+    return { ...p, cells, subs, doneInPassed, doneTotal, rate, deptStudyCount, peerMax, score, atRisk, badges,
+             missedRounds: lastTwo.filter(m => !subs.has(m.round)).map(m => m.round) };
+  });
+
+  const perMission = missions.map(m => {
+    const n = rows.filter(r => r.subs.has(m.round)).length;
+    return { ...m, submitted: n, rate: pct(n, rows.length || 1) };
+  });
+
+  const peerTotal = rows.reduce((a, r) => a + r.peerMax, 0);   // 부서별 동료는 매주 중복되므로 최대값 합산
+  const rated = rows.filter(r => r.rate != null);
+  return {
+    missions, perMission, rows, current, passedCount, unmatched,
+    beforeStart: isBeforeStart(today),
+    kpi: {
+      progress: pct(passedCount, MISSIONS.length),
+      passedCount,
+      currentRate: current ? pct(rows.filter(r => r.subs.has(current.round)).length, rows.length || 1) : null,
+      currentSubmitted: current ? rows.filter(r => r.subs.has(current.round)).length : 0,
+      avgRate: rated.length ? Math.round(rated.reduce((a, r) => a + r.rate, 0) / rated.length) : null,
+      peerTotal, peerRate: pct(peerTotal, CONFIG.PEER_TARGET),
+      riskCount: rows.filter(r => r.atRisk).length
+    }
+  };
+}
+
+/* ============================================================
+   7. 렌더링
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const el = (t, c, h) => { const x = document.createElement(t); if (c) x.className = c; if (h != null) x.innerHTML = h; return x; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+const STATE_LABEL = { done:"완료", imm:"마감 임박 · 미제출", missed:"미제출", open:"진행 중 · 미제출", future:"예정" };
+const STATE_SYM   = { done:"✓", imm:"!", missed:"✕", open:"·", future:"" };
+
+function render() {
+  const D = computeAll();
+  renderMode(D);
+  renderTop(D); renderKPI(D); renderHeatmap(D); renderTable(D);
+  renderMissions(D); renderRisk(D); renderLeaderboard(D);
+  document.querySelectorAll("[data-sample]").forEach(t => t.hidden = (MODE !== "preview"));
+  $("#footUpdated").textContent =
+    MODE === "preview" ? "샘플(가상) 활동 데이터 · 시뮬레이션 시점 " + fmtFull(STATE.today)
+    : MODE === "roster" ? "확정 명단 " + D.rows.length + "명 · 출처 「추천선발 직원 명단v3.0.xlsx」 · 제출 데이터 미연결"
+    : "마지막 갱신 " + (STATE.lastFetch ? fmtDateTime(STATE.lastFetch) : "—") + " · 60초마다 자동 갱신";
+}
+
+/* 데이터 품질 경고 — 조용히 누락되면 운영자가 영구히 알 수 없는 항목들
+   ① 명단과 이름이 일치하지 않는 제출  ② 회차 값을 인식하지 못한 행
+   ③ 타임스탬프 해석 실패  ④ 동료 수를 숫자로 읽지 못한 행 */
+function dataWarnHTML(D) {
+  if (MODE !== "real") return "";
+  const w = [];
+  if (D.unmatched && D.unmatched.size) {
+    const names = [...D.unmatched.entries()].map(([n, c]) => `${esc(n)}(${c}건)`).join(", ");
+    w.push(`<b>명단과 이름이 일치하지 않는 제출 ${[...D.unmatched.values()].reduce((a,b)=>a+b,0)}건</b> — ${names}.
+            이 제출은 집계에서 빠져 해당 인원이 미제출로 보입니다. 시트의 이름을 명단과 맞춰 주세요.`);
+  }
+  const iss = STATE.dataIssues || {};
+  if (iss.badRound) w.push(`회차 값을 1~8로 인식하지 못한 행 <b>${iss.badRound}건</b> — 폼 선택지를 "1회차"처럼 숫자로 시작하게 두세요.`);
+  if (iss.badTs)    w.push(`제출 시각을 해석하지 못한 행 <b>${iss.badTs}건</b> — 타임스탬프 열 서식을 확인하세요.`);
+  if (iss.badPeers) w.push(`함께한 동료 수를 숫자로 읽지 못한 행 <b>${iss.badPeers}건</b> — "3명" 대신 "3"으로 입력하면 정확합니다.`);
+  if (!w.length) return "";
+  return `<div class="demo-banner"><span class="ic">⚠</span>
+    <div><b>데이터 확인이 필요합니다.</b><ul style="margin:6px 0 0;padding-left:18px">
+    ${w.map(x => `<li style="margin-bottom:3px">${x}</li>`).join("")}</ul></div></div>`;
+}
+
+// 현재 모드를 알리는 배너
+function renderMode(D) {
+  const box = $("#modeBox");
+  if (MODE === "real") { box.innerHTML = dataWarnHTML(D); return; }
+  if (MODE === "roster") {
+    box.innerHTML = `<div class="info-banner">
+      <span class="ic">✓</span>
+      <div><b>확정 명단 ${D.rows.length}명을 반영했습니다.</b>
+        출처 「추천선발 직원 명단v3.0.xlsx」 · ${new Set(D.rows.map(r=>r.dept)).size}개 부서.
+        제출 현황은 <b>아직 없습니다</b> — 스터디가 ${fmtFull(parseDate(CONFIG.START_DATE))}에 시작하기 때문입니다.
+        구글 시트를 연결하면 제출 기록이 실시간으로 채워집니다.</div>
+      <button class="banner-btn" data-mode="preview">샘플 활동으로 화면 미리보기</button>
+    </div>`;
+  } else {
+    box.innerHTML = `<div class="demo-banner">
+      <span class="ic">⚠</span>
+      <div><b>샘플(가상) 활동 데이터입니다 — 실제 제출 기록이 아닙니다.</b>
+        화면 구성을 확인하기 위한 임의의 값이며, 어떤 참가자의 실제 수행 결과도 나타내지 않습니다.
+        개인정보 보호를 위해 이름은 <b>마스킹</b>되어 표시됩니다.
+        아래 슬라이더로 스터디 중간 시점의 모습을 볼 수 있습니다.</div>
+      <button class="banner-btn primary" data-mode="roster">실제 현황으로 돌아가기</button>
+    </div>`;
+  }
+}
+
+function renderTop(D) {
+  const showcase = parseDate(CONFIG.SHOWCASE_DATE);
+  const dd = dayDiff(showcase, STATE.today);
+  const cur = D.current;
+  const chips = [];
+  if (D.beforeStart) {
+    chips.push(`<span class="chip accent"><b>준비 중</b> · 8/24 시작</span>`);
+  } else {
+    chips.push(`<span class="chip accent">${cur ? "진행 중 <b>" + cur.round + "회차</b> · D-" + cur.dday : "<b>전 회차 마감</b>"}</span>`);
+  }
+  chips.push(`<span class="chip">참가 <b>${D.rows.length}</b>명</span>`);
+  chips.push(`<span class="chip">성과공유회 <b>${dd > 0 ? "D-" + dd : dd === 0 ? "오늘" : "종료"}</b></span>`);
+  $("#topChips").innerHTML = chips.join("");
+}
+
+function renderKPI(D) {
+  const k = D.kpi;
+  const box = $("#kpis"); box.innerHTML = "";
+  const startDd = dayDiff(parseDate(CONFIG.START_DATE), STATE.today);
+  // 마감된 회차가 없으면 비율 지표는 0%가 아니라 '—' (아직 계산할 대상이 없음)
+  const noneDue = D.passedCount === 0;
+  const riskUnknown = D.passedCount < 2;
+  const tiles = D.beforeStart ? [
+    { hero: true, lab: "스터디 시작까지", val: "D-" + startDd, unit: "",
+      sub: `${fmtFull(parseDate(CONFIG.START_DATE))}(월) 시작 · 1회차 마감 ${fmtFull(MISSIONS[0].dueDate || parseDate(MISSIONS[0].due))}` },
+    { lab: "확정 명단", val: D.rows.length, unit: "명",
+      sub: `${new Set(D.rows.map(r => r.dept)).size}개 부서` },
+    { lab: "예정 미션", val: MISSIONS.length, unit: "개", sub: "8/28 ~ 10/15 마감" },
+    // 시작 전에도 실제 건수를 셉니다 — 폼 테스트 제출이 반영되는지 여기서 확인할 수 있습니다
+    { lab: "제출 기록", val: D.rows.reduce((a, r) => a + r.doneTotal, 0), unit: "건", sub: "스터디 시작 전" },
+    { lab: "성과공유회", val: "D-" + dayDiff(parseDate(CONFIG.SHOWCASE_DATE), STATE.today), unit: "",
+      sub: "10/30(금) 14:00 대강당" }
+  ] : [
+    { hero: true, lab: "전체 진행률", val: k.progress, unit: "%",
+      sub: `마감 지난 미션 ${k.passedCount} / 총 ${MISSIONS.length}개`, meter: k.progress },
+    { lab: D.current ? `${D.current.round}회차 제출률` : "최종 회차 제출률",
+      val: D.current ? k.currentRate : (D.perMission.at(-1)?.rate ?? 0), unit: "%",
+      sub: D.current ? `${k.currentSubmitted} / ${D.rows.length}명 제출` : "모든 회차 종료",
+      meter: D.current ? k.currentRate : (D.perMission.at(-1)?.rate ?? 0) },
+    { lab: "평균 미션 완료율", val: noneDue ? "—" : k.avgRate, unit: noneDue ? "" : "%",
+      sub: noneDue ? "1회차 마감 후 집계" : "참가자 개인 완료율의 평균",
+      meter: noneDue ? null : k.avgRate },
+    { lab: "부서 확산 인원", val: k.peerTotal, unit: "명",
+      sub: `목표 ${CONFIG.PEER_TARGET}명 대비 ${k.peerRate}%`, meter: Math.min(100, k.peerRate) },
+    // 이탈 위험은 '2회차 연속'이 조건이므로 마감이 2회차 미만이면 판정 자체가 불가능
+    { risk: true, lab: "집중 관리 대상", val: riskUnknown ? "—" : k.riskCount, unit: riskUnknown ? "" : "명",
+      sub: riskUnknown ? "2회차 마감 후 집계" : "2회차 연속 미제출" }
+  ];
+  tiles.forEach(t => {
+    const c = el("div", "card kpi" + (t.hero ? " hero" : "") + (t.risk ? " risk" : ""));
+    c.innerHTML = `<div class="lab">${esc(t.lab)}</div>
+      <div class="val">${t.val}<span class="u">${t.unit}</span></div>
+      <div class="sub">${esc(t.sub)}</div>
+      ${t.meter != null ? `<div class="meter"><i style="width:${t.meter}%"></i></div>` : ""}`;
+    box.appendChild(c);
+  });
+}
+
+function visibleRows(D) {
+  const f = STATE.filters;
+  let rows = D.rows.slice();
+  if (f.dept) rows = rows.filter(r => r.dept === f.dept);
+  if (f.name) rows = rows.filter(r => r.name.includes(f.name) || (r.nick || "").includes(f.name));
+  if (f.riskOnly) rows = rows.filter(r => r.atRisk);
+  // rate가 null(마감 회차 없음)이면 정렬에서 뒤로 보냅니다
+  const rv = r => (r.rate == null ? -1 : r.rate);
+  const cmp = {
+    no: (a, b) => a.no - b.no,
+    rate: (a, b) => rv(b) - rv(a) || a.no - b.no,
+    rateAsc: (a, b) => rv(a) - rv(b) || a.no - b.no,
+    score: (a, b) => b.score - a.score || a.no - b.no,
+    name: (a, b) => a.name.localeCompare(b.name, "ko")
+  }[f.sort];
+  return rows.sort(cmp);
+}
+
+function renderHeatmap(D) {
+  const hm = $("#hm"); hm.innerHTML = "";
+
+  // 머리행
+  const head = el("div", "hm-row hm-head");
+  head.appendChild(el("div", "hcell", "마에스트로"));
+  D.missions.forEach(m => {
+    const cls = "hcell" + (m.phase === "current" ? " cur" : "");
+    head.appendChild(el("div", cls, `${m.round}회차<small>${fmtMD(m.dueDate)}</small>`));
+  });
+  head.appendChild(el("div", "hcell", "완료율"));
+  hm.appendChild(head);
+
+  const rows = visibleRows(D);
+  if (!rows.length) {
+    hm.appendChild(el("div", "", `<div style="padding:24px;color:var(--muted);font-size:13px">조건에 맞는 참가자가 없습니다.</div>`));
+    return;
+  }
+  rows.forEach(r => {
+    const tr = el("div", "hm-row");
+    const nb = el("button", "name-cell");
+    nb.innerHTML = `<span class="no">${r.no}</span>
+      <span class="who2"><span class="nm">${esc(displayName(r))}</span><span class="dp"> · ${esc(r.dept)}</span></span>`;
+    nb.addEventListener("click", () => openDrawer(r, D));
+    tr.appendChild(nb);
+
+    r.cells.forEach(c => {
+      const d = el("div", "cell " + c.state, STATE_SYM[c.state]);
+      d.setAttribute("role", "img");
+      d.setAttribute("aria-label", `${displayName(r)} ${c.mission.round}회차 ${STATE_LABEL[c.state]}`);
+      if (c.state !== "future") {
+        d.addEventListener("mouseenter", e => showTip(e, r, c));
+        d.addEventListener("mousemove", moveTip);
+        d.addEventListener("mouseleave", hideTip);
+        // 키보드·터치 사용자도 상세를 볼 수 있게 (마우스 전용이 되지 않도록)
+        d.tabIndex = 0;
+        d.addEventListener("focus", () => showTipAt(d, r, c));
+        d.addEventListener("blur", hideTip);
+        d.addEventListener("click", () => showTipAt(d, r, c));
+      }
+      tr.appendChild(d);
+    });
+    const rc = el("div", "rate-cell");
+    const rateTxt = r.rate == null ? "—" : r.rate + "%";
+    rc.innerHTML = r.atRisk ? `<span class="warn">${rateTxt}</span>` : rateTxt;
+    if (r.rate == null) rc.title = "마감된 회차가 없어 아직 완료율을 계산할 수 없습니다";
+    tr.appendChild(rc);
+    hm.appendChild(tr);
+  });
+}
+
+function showTip(e, r, c) {
+  const t = $("#tip");
+  const m = c.mission, s = c.sub;
+  t.innerHTML = `<div class="t">${esc(displayName(r))} · ${m.round}회차</div>
+    <div class="r">${esc(m.title)}</div>
+    <div class="r">마감 ${fmtFull(m.dueDate)} · <b>${STATE_LABEL[c.state]}</b></div>
+    ${s ? `<div class="r" style="margin-top:6px">제출 ${fmtDateTime(s.ts)}<br>부서 스터디 ${esc(s.deptStudy)} · 동료 ${esc(s.peers)}명</div>` : ""}`;
+  t.style.opacity = 1; moveTip(e);
+}
+function moveTip(e) {
+  const t = $("#tip"), pad = 14;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  const r = t.getBoundingClientRect();
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+  t.style.left = x + "px"; t.style.top = y + "px";
+}
+function hideTip() { $("#tip").style.opacity = 0; }
+// 마우스 좌표 없이 요소 기준으로 툴팁 띄우기 (키보드 포커스·터치용)
+function showTipAt(node, r, c) {
+  const b = node.getBoundingClientRect();
+  showTip({ clientX: b.left + b.width / 2, clientY: b.bottom - 4 }, r, c);
+}
+
+// 색에 의존하지 않는 표 보기 (접근성 대비 경로)
+function renderTable(D) {
+  const rows = visibleRows(D);
+  let h = `<table class="data"><thead><tr><th>번호</th><th>이름</th><th>부서</th>`;
+  D.missions.forEach(m => h += `<th>${m.round}회차</th>`);
+  h += `<th>완료율</th><th>점수</th><th>상태</th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    h += `<tr><td class="n">${r.no}</td><td>${esc(displayName(r))}</td><td>${esc(r.dept)}</td>`;
+    r.cells.forEach(c => h += `<td>${STATE_LABEL[c.state]}</td>`);
+    h += `<td class="n">${r.rate == null ? "—" : r.rate + "%"}</td><td class="n">${r.score}</td>
+          <td>${r.atRisk ? "⚠ 집중 관리" : "정상"}</td></tr>`;
+  });
+  h += `</tbody></table>`;
+  $("#tableWrap").innerHTML = h;
+}
+
+function renderMissions(D) {
+  const box = $("#missions"); box.innerHTML = "";
+  D.perMission.forEach(m => {
+    const c = el("div", "card mcard" + (m.phase === "current" ? " is-cur" : "") + (m.phase === "future" ? " is-fut" : ""));
+    const dd = m.phase === "past" ? "마감 완료"
+             : m.dday === 0 ? "오늘 마감" : "D-" + m.dday;
+    c.innerHTML = `
+      <div class="top">
+        <span class="rd">${m.round}회차</span>
+        <span class="out" style="font-variant-numeric:tabular-nums">${fmtFull(m.dueDate)}</span>
+        <span class="dd${m.imminent ? " soon" : ""}">${dd}</span>
+      </div>
+      <h3>${esc(m.title)}</h3>
+      <div class="out">결과물 · ${esc(m.output)}</div>
+      <div class="stat"><b>${(m.phase === "future" && !m.submitted) ? "—" : m.rate + "%"}</b>
+        <span>${m.phase === "future"
+            ? (m.submitted ? m.submitted + " / " + D.rows.length + "명 선제출" : "시작 전")
+            : m.submitted + " / " + D.rows.length + "명 제출"}</span></div>
+      <div class="meter"><i style="width:${m.rate}%"></i></div>
+      <details style="margin-top:6px">
+        <summary style="font-size:12px;color:var(--muted);cursor:pointer">수행 지침</summary>
+        <p class="out" style="margin:6px 0 0">${esc(m.desc)}</p>
+      </details>`;
+    box.appendChild(c);
+  });
+}
+
+function renderRisk(D) {
+  const box = $("#riskBox");
+  const risky = D.rows.filter(r => r.atRisk).sort((a, b) => a.rate - b.rate);
+  if (!D.passedCount) {
+    box.innerHTML = `<div class="ok-note"><span class="ic">ℹ</span> 아직 마감된 회차가 없습니다. 1회차 마감 이후부터 집계됩니다.</div>`;
+    return;
+  }
+  // 마감이 1회차뿐이면 '2회차 연속 미제출'을 판정할 수 없으므로 단정하지 않고 1회차 미제출자만 알립니다
+  if (D.passedCount < 2) {
+    const m1 = D.missions.filter(m => m.phase === "past")[0];
+    const miss1 = D.rows.filter(r => !r.subs.has(m1.round));
+    box.innerHTML = miss1.length
+      ? `<div style="font-size:13px;color:var(--ink-2)">
+           <b>${m1.round}회차 미제출 ${miss1.length}명</b> — '2회차 연속 미제출' 판정은 2회차 마감 후부터 가능합니다.</div>
+         <div class="risk-list">${miss1.map(r => `<div class="risk-item" style="cursor:default">
+           <span class="ic">·</span><span><span class="nm">${esc(displayName(r))}</span>
+           <span style="color:var(--muted);font-size:12px"> · ${esc(r.dept)}</span></span></div>`).join("")}</div>`
+      : `<div class="ok-note"><span class="ic">✓</span> ${m1.round}회차 전원 제출했습니다. '2회차 연속 미제출' 판정은 2회차 마감 후부터 가능합니다.</div>`;
+    return;
+  }
+  if (!risky.length) {
+    box.innerHTML = `<div class="ok-note"><span class="ic">✓</span> 2회차 연속 미제출자가 없습니다. 전원 참여를 유지하고 있습니다.</div>`;
+    return;
+  }
+  box.innerHTML = `<div style="font-size:13px;color:var(--ink-2)">
+    <b style="color:var(--critical)">⚠ ${risky.length}명</b> — 최근 2개 회차(${D.missions.filter(m=>m.phase==="past").slice(-2).map(m=>m.round+"회차").join(", ")}) 연속 미제출입니다. 개별 연락을 권합니다.</div>
+    <div class="risk-list"></div>`;
+  const list = box.querySelector(".risk-list");
+  risky.forEach(r => {
+    const b = el("button", "risk-item");
+    b.innerHTML = `<span class="ic">⚠</span>
+      <span><span class="nm">${esc(displayName(r))}</span>
+      <span style="color:var(--muted);font-size:12px"> · ${esc(r.dept)}</span></span>
+      <span class="dt">완료 ${r.doneInPassed}/${D.passedCount}회</span>`;
+    b.addEventListener("click", () => openDrawer(r, D));
+    list.appendChild(b);
+  });
+}
+
+function renderLeaderboard(D) {
+  const box = $("#lb"); box.innerHTML = "";
+  const sorted = D.rows.slice().sort((a, b) => b.score - a.score || b.rate - a.rate || a.no - b.no);
+  const list = STATE.lb.all ? sorted : sorted.slice(0, 5);
+  if (!D.passedCount) {
+    box.innerHTML = `<div style="padding:16px;font-size:13px;color:var(--ink-2)">1회차 마감 이후부터 순위가 표시됩니다.</div>`;
+    return;
+  }
+  list.forEach((r, i) => {
+    const rank = sorted.indexOf(r) + 1;
+    // div가 아니라 button — 키보드·화면낭독기로도 상세 패널을 열 수 있어야 합니다
+    const row = el("button", "lb-row" + (rank <= 3 ? " top" + rank : ""));
+    const label = displayName(r);
+    const medal = rank <= 3 ? ["🥇","🥈","🥉"][rank-1] : "";
+    row.innerHTML = `<div class="rk">${medal
+        ? `<span aria-hidden="true">${medal}</span><span class="sr">${rank}위</span>`
+        : `${rank}<span class="sr">위</span>`}</div>
+      <div class="who"><span class="nm">${esc(label)}</span></div>
+      <div class="badges">${r.badges.map(b => `<span class="badge ${b.c}">${esc(b.t)}</span>`).join("")}</div>
+      <div class="pt">${r.score}<small>점</small></div>`;
+    row.addEventListener("click", () => openDrawer(r, D));
+    box.appendChild(row);
+  });
+  if (!STATE.lb.all) {
+    box.appendChild(el("div", "", `<div style="padding:10px 16px;font-size:12px;color:var(--muted)">
+      공개 화면에서는 상위 5명만 표시합니다 — 하위권 부담을 줄이기 위한 기본값입니다.</div>`));
+  }
+}
+
+/* ---------- 상세 패널 ---------- */
+function openDrawer(r, D) {
+  const body = $("#drawerBody");
+  const cls = { done:"lg-done", imm:"lg-imm", missed:"lg-miss", open:"lg-open", future:"lg-fut" };
+  body.innerHTML = `
+    <h3>${esc(displayName(r))} ${r.atRisk ? '<span class="badge" style="color:var(--critical);vertical-align:middle">⚠ 집중 관리</span>' : ""}</h3>
+    <div class="dept">${esc(r.dept)}${r.nick ? " · " + esc(r.nick) : ""} · ${maskEmail(r.email)}</div>
+    <div class="badges" style="margin-top:8px">${r.badges.map(b => `<span class="badge ${b.c}">${esc(b.t)}</span>`).join("")}</div>
+    <div class="d-stats">
+      <div><div class="l">미션 완료율</div><div class="v">${r.rate == null ? "—" : r.rate + "%"}</div></div>
+      <div><div class="l">부서 스터디</div><div class="v">${r.deptStudyCount}<span style="font-size:12px">회</span></div></div>
+      <div><div class="l">함께한 동료</div><div class="v">${r.peerMax}<span style="font-size:12px">명</span></div></div>
+    </div>
+    <div style="font-size:12.5px;color:var(--muted);margin-top:10px">
+      ${D.passedCount ? `마감 지난 ${D.passedCount}회차 중 ${r.doneInPassed}회 제출` : "마감된 회차 없음"}
+      · 제출 ${r.doneTotal}건 · 누적 점수 ${r.score}점</div>
+    <div class="d-list">
+      ${r.cells.map(c => {
+        const s = c.sub;
+        return `<div class="d-item">
+          <span class="st ${cls[c.state]}">${STATE_SYM[c.state]}</span>
+          <span class="bd">
+            <span class="ti">${c.mission.round}회차 · ${esc(c.mission.title)}</span>
+            <span class="me">마감 ${fmtFull(c.mission.dueDate)} · ${STATE_LABEL[c.state]}</span>
+            ${s ? `<br><span class="me">제출 ${fmtDateTime(s.ts)} · 부서 스터디 ${esc(s.deptStudy)} · 동료 ${esc(s.peers)}명</span>
+                   <br><a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.link)}</a>` : ""}
+          </span></div>`;
+      }).join("")}
+    </div>`;
+  $("#drawer").classList.add("on");
+  $("#drawer").setAttribute("aria-hidden", "false");
+  // 포커스를 패널로 옮기고, 배경은 조작 불가 상태로 둡니다
+  DRAWER.lastFocus = document.activeElement;
+  DRAWER.openRowNo = r.no;
+  document.querySelectorAll(".wrap, header.topbar").forEach(n => n.setAttribute("inert", ""));
+  document.body.style.overflow = "hidden";
+  $("#drawer .close").focus();
+}
+function closeDrawer() {
+  if (!$("#drawer").classList.contains("on")) return;
+  $("#drawer").classList.remove("on");
+  $("#drawer").setAttribute("aria-hidden", "true");
+  document.querySelectorAll(".wrap, header.topbar").forEach(n => n.removeAttribute("inert"));
+  document.body.style.overflow = "";
+  DRAWER.openRowNo = null;
+  if (DRAWER.lastFocus && document.contains(DRAWER.lastFocus)) DRAWER.lastFocus.focus();
+}
+const DRAWER = { lastFocus: null, openRowNo: null };
+
+// Tab 순환을 패널 안에 묶어 둡니다 (모달의 기본 요건)
+function trapTab(e) {
+  if (e.key !== "Tab" || !$("#drawer").classList.contains("on")) return;
+  const f = [...$("#drawer .panel").querySelectorAll('button, a[href], input, select, [tabindex]:not([tabindex="-1"])')]
+              .filter(n => !n.disabled && n.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+/* ============================================================
+   8. 데이터 적재
+   ============================================================ */
+/* 구글 폼 타임스탬프 파싱
+   폼은 로케일에 따라 "2026. 8. 28. 오후 9:03:12" / "2026-08-28 21:03:12" /
+   "8/28/2026 21:03:12" 등으로 기록합니다. 한국어 오전·오후를 직접 해석하고,
+   해석에 실패하면 '지금 시각'으로 위조하지 않고 null로 두어 화면에 사실대로 표시합니다. */
+function parseFormTimestamp(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  // 오전/오후는 정규식 그룹으로 잡지 않고 따로 검사합니다.
+  // (선택적 그룹 + 게으른 \D*? 조합에서는 '오후'가 그룹을 건너뛰고 삼켜집니다)
+  const isPM = /오후|PM/i.test(s), isAM = /오전|AM/i.test(s);
+  // 연-월-일 (+ 시:분[:초])
+  const m = s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})(?:\D+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m) {
+    const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3]);
+    if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) {     // 8/28/2026 같은 다른 순서는 아래로 위임
+      let h = Number(m[4] || 0);
+      if (isPM && h < 12) h += 12;
+      if (isAM && h === 12) h = 0;
+      return new Date(y, mo - 1, da, h, Number(m[5] || 0), Number(m[6] || 0));
+    }
+  }
+  const d = new Date(s.replace(/\s+/g, " "));   // 그 외 형식은 브라우저 파서에 위임
+  return isNaN(d) ? null : d;
+}
+
+// '예/Y/운영함/1' 등을 모두 '운영'으로 관용 판정 (폼 선택지 문구가 조금 달라도 집계되도록)
+function isYes(v) { return /^(예|y|yes|o|운영|운영함|했음|true|1)/i.test(String(v ?? "").trim()); }
+// '3명', ' 4 ' 처럼 단위·공백이 섞여도 숫자만 추출
+function toInt(v) { return Number(String(v ?? "").replace(/[^0-9.\-]/g, "")) || 0; }
+// 프로토콜 없이 붙여넣은 링크(example.com/x)를 절대 URL로 보정 — 없으면 클릭 시 상대경로로 깨짐
+function toLink(v) {
+  const s = String(v ?? "").trim();
+  if (!s || /^https?:\/\//i.test(s)) return s;
+  return /^[^\s]+\.[^\s]+/.test(s) ? "https://" + s : s;   // 도메인처럼 보일 때만 보정
+}
+// 이름 매칭 키 — 내부 공백 제거 + 유니코드 정규화 ('장 성빈' = '장성빈')
+function nameKey(n) { return String(n ?? "").normalize("NFC").replace(/\s+/g, ""); }
+
+const VALID_ROUNDS = new Set(MISSIONS.map(m => m.round));
+
+async function loadReal() {
+  const [pRes, sRes] = await Promise.all([
+    fetch(CONFIG.PARTICIPANTS_CSV, { cache: "no-store" }),
+    fetch(CONFIG.SUBMISSIONS_CSV,  { cache: "no-store" })
+  ]);
+  if (!pRes.ok || !sRes.ok)
+    throw new Error("시트를 불러올 수 없습니다 — [공유]를 '링크가 있는 모든 사용자(뷰어)'로 바꿨는지 확인하세요");
+  const pText = await pRes.text(), sText = await sRes.text();
+  // 권한이 없으면 CSV 대신 로그인 HTML이 돌아옵니다 (200으로 오기도 합니다)
+  if (/^\s*</.test(pText) || /^\s*</.test(sText))
+    throw new Error("CSV가 아니라 HTML이 왔습니다 — 시트 공유가 비공개이거나 gid가 틀렸을 수 있습니다");
+
+  const ps = csvToObjects(pText);
+  const ss = csvToObjects(sText);
+  // 헤더 검증 — 컬럼명이 다르면 조용히 0행이 되므로 여기서 잡습니다
+  const pHead = Object.keys(ps[0] || {});
+  const sHead = Object.keys(ss[0] || {});
+  const needP = ["이름", "부서"].filter(h => !pHead.includes(h));
+  const needS = ["이름", "회차"].filter(h => !sHead.includes(h));
+  if (!ps.length) throw new Error("참가자 탭이 비어 있습니다");
+  if (needP.length) throw new Error("참가자 탭에 필요한 열이 없습니다: " + needP.join(", "));
+  if (ss.length && needS.length) throw new Error("제출 탭에 필요한 열이 없습니다: " + needS.join(", "));
+
+  STATE.participants = ps.map((o, i) => ({
+    no: Number(o["번호"]) || i + 1,
+    name: (o["이름"] || "").trim(), dept: (o["부서"] || "").trim(),
+    email: (o["이메일"] || "").trim(), nick: (o["닉네임"] || "").trim()
+  })).filter(p => p.name);
+
+  const issues = { badRound: 0, badTs: 0, badPeers: 0 };
+  STATE.submissions = ss.map(o => {
+    // 앞쪽 숫자만 취함 — '2회차 (9/4 마감)'가 294가 되던 문제 방지
+    const rm = String(o["회차"] ?? "").match(/\d{1,2}/);
+    const round = rm ? Number(rm[0]) : 0;
+    if (!VALID_ROUNDS.has(round)) issues.badRound++;
+    const ts = parseFormTimestamp(o["타임스탬프"]);
+    if (!ts) issues.badTs++;
+    const rawPeers = String(o["함께한동료수"] ?? "").trim();
+    if (rawPeers && !/^\d+$/.test(rawPeers)) issues.badPeers++;
+    return {
+      ts, name: (o["이름"] || "").trim(), round,
+      link: toLink(o["제출링크"]),
+      deptStudy: o["부서스터디운영"] || "",
+      peers: toInt(o["함께한동료수"]),
+      note: o["비고"] || ""
+    };
+  }).filter(s => s.name && VALID_ROUNDS.has(s.round));   // 회차 화이트리스트 통과분만
+
+  STATE.dataIssues = issues;
+  STATE.lastFetch = new Date();
+  STATE.today = startOfDay(new Date());
+}
+
+/* 모드 전환 — roster(실제: 명단만) ↔ preview(샘플 활동) */
+function setMode(m) {
+  closeDrawer();          // 열려 있던 패널에 이전 모드의 이름이 남지 않도록
+  MODE = m;
+  if (m === "preview") {
+    STATE.submissions = buildSample();
+    STATE.today = addDays(SIM_START, Number($("#simRange").value));
+    $("#simbar").hidden = false;
+    updateSimLabel();                          // 드래그 전에도 시점 라벨이 보이도록
+  } else {
+    STATE.submissions = [];                    // 실제 제출 기록 없음 (스터디 시작 전)
+    STATE.today = startOfDay(new Date());
+    $("#simbar").hidden = true;
+  }
+  // 샘플 모드에서는 이름 마스킹을 강제하고 해제할 수 없게 잠급니다
+  const hn = $("#hideNames");
+  hn.checked = (m === "preview") ? true : STATE.hideNames;
+  hn.disabled = (m === "preview");
+  render();
+  // 버튼이 innerHTML 교체로 사라지므로 새 버튼으로 포커스를 이어 줍니다
+  $("#modeBox [data-mode]")?.focus();
+}
+
+/* ============================================================
+   9. 초기화 · 이벤트
+   ============================================================ */
+function fillDeptFilter() {
+  const sel = $("#fDept");
+  const depts = [...new Set(STATE.participants.map(p => p.dept))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"ko"));
+  sel.innerHTML = `<option value="">전체 부서</option>` + depts.map(d => `<option>${esc(d)}</option>`).join("");
+  // 60초 갱신으로 목록을 다시 만들 때 선택값이 초기화되면
+  // 드롭다운 표시와 실제 필터가 어긋나므로 복원합니다
+  if (STATE.filters.dept && !depts.includes(STATE.filters.dept)) STATE.filters.dept = "";
+  sel.value = STATE.filters.dept;
+}
+
+function bindEvents() {
+  // 테마 — 저장값이 없으면 OS 설정을 따르고, 전환하면 저장합니다
+  const applyTheme = t => {
+    document.documentElement.setAttribute("data-theme", t);
+    $("#themeBtn").setAttribute("aria-pressed", String(t === "dark"));
+    $("#themeBtn").title = t === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환";
+  };
+  let saved = null;
+  try { saved = localStorage.getItem("pnu-ai-theme"); } catch (_) {}
+  applyTheme(saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+  $("#themeBtn").addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+    try { localStorage.setItem("pnu-ai-theme", next); } catch (_) {}
+  });
+  $("#fDept").addEventListener("change", e => { STATE.filters.dept = e.target.value; render(); });
+  $("#fSort").addEventListener("change", e => { STATE.filters.sort = e.target.value; render(); });
+  $("#fName").addEventListener("input", e => { STATE.filters.name = e.target.value.trim(); render(); });
+  $("#fRiskOnly").addEventListener("change", e => { STATE.filters.riskOnly = e.target.checked; render(); });
+  // 마스킹을 켜는 순간 열려 있던 패널에 실명이 남지 않도록 먼저 닫습니다
+  $("#hideNames").addEventListener("change", e => { closeDrawer(); STATE.hideNames = e.target.checked; render(); });
+  $("#lbAll").addEventListener("change", e => { STATE.lb.all = e.target.checked; render(); });
+  document.querySelectorAll("#drawer [data-close]").forEach(b => b.addEventListener("click", closeDrawer));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); trapTab(e); });
+
+  // 배너의 모드 전환 버튼(동적으로 다시 그려지므로 위임 처리)
+  $("#modeBox").addEventListener("click", e => {
+    const b = e.target.closest("[data-mode]");
+    if (b) setMode(b.dataset.mode);
+  });
+
+  // 시점 시뮬레이터 (샘플 모드에서만 노출)
+  const rng = $("#simRange");
+  rng.max = SIM_MAX;
+  rng.addEventListener("input", () => {
+    STATE.today = addDays(SIM_START, Number(rng.value));
+    updateSimLabel();
+    render();
+  });
+}
+
+function updateSimLabel() {
+  const wd = ["일","월","화","수","목","금","토"][STATE.today.getDay()];
+  $("#simOut").textContent = fmtFull(STATE.today) + " (" + wd + ")";
+  const cur = computeMissions(STATE.today).find(m => m.phase === "current");
+  $("#simPhase").textContent = cur ? `${cur.round}회차 진행 중` : "전 회차 마감";
+}
+
+async function init() {
+  STATE.today = startOfDay(new Date());
+  bindEvents();
+
+  if (MODE === "real") {
+    $("#simbar").remove();
+    // file:// 에서는 브라우저가 구글 시트 요청을 CORS로 차단합니다(Origin이 null이라 허용 헤더가 오지 않음)
+    if (location.protocol === "file:") {
+      STATE.participants = ROSTER.map(p => ({ ...p }));
+      STATE.submissions = [];
+      fillDeptFilter(); render();
+      $("#modeBox").innerHTML = `<div class="demo-banner"><span class="ic">⚠</span>
+        <div><b>이 파일을 file:// 로 열어서 구글 시트를 읽을 수 없습니다.</b>
+        브라우저 보안 정책(CORS) 때문이며 설정으로 우회할 수 없습니다.
+        아래처럼 로컬 서버로 열거나 GitHub Pages에 올려 주세요. 지금은 확정 명단만 표시합니다.
+        <div style="margin-top:6px;font-family:ui-monospace,monospace;font-size:12px;
+                    background:var(--surface-2);padding:6px 8px;border-radius:6px">
+          python -m http.server 8000 &nbsp;→&nbsp; http://localhost:8000/index.html</div></div></div>`;
+      return;
+    }
+    const tick = async () => {
+      try {
+        await loadReal();
+        fillDeptFilter();
+        render();
+      } catch (err) {
+        // 시트를 못 읽으면 내장 명단으로 대체해 최소한 명단은 보이게 하고, 원인을 그대로 알립니다
+        if (!STATE.participants.length) {
+          STATE.participants = ROSTER.map(p => ({ ...p }));
+          STATE.submissions = [];
+          fillDeptFilter();
+        }
+        render();
+        $("#modeBox").innerHTML =
+          `<div class="demo-banner"><span class="ic">⚠</span>
+           <div><b>시트 데이터를 불러오지 못했습니다.</b> ${esc(err.message)}<br>
+           내장 확정 명단 ${STATE.participants.length}명만 표시합니다. 60초 후 다시 시도합니다.</div></div>`;
+      }
+    };
+    await tick();
+    setInterval(tick, CONFIG.REFRESH_MS);
+  } else {
+    // 시트 미연결 — 확정 명단 + 실제 현황(제출 0건)
+    STATE.participants = ROSTER.map(p => ({ ...p }));
+    STATE.submissions = [];
+    fillDeptFilter();
+    render();
+  }
+}
+init();
+</script>
+</body>
+</html>
