@@ -128,6 +128,14 @@ header.topbar {
 }
 .iconbtn:hover { background: var(--surface-2); }
 
+/* 동작 방식 슬라이드로 가는 링크 — 상대경로라 로컬·GitHub Pages 모두에서 동작합니다 */
+.navlink {
+  font: inherit; font-size: 12.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
+  padding: 7px 12px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+}
+.navlink:hover { background: var(--surface-2); color: var(--ink); }
+
 /* ---------- 데모 배너 ---------- */
 .demo-banner {
   margin: 18px 0 0; padding: 12px 14px; border-radius: var(--radius);
@@ -404,6 +412,8 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
       </div>
     </div>
     <div class="chips" id="topChips"></div>
+    <a class="navlink" href="how-it-works.html"
+       title="이 대시보드가 어떻게 동작하는지 한 장으로 보기">동작 방식 ↗</a>
     <button class="iconbtn" id="themeBtn" title="라이트/다크 전환" aria-label="라이트/다크 전환">◐</button>
   </div>
 </header>
