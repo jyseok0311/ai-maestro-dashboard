@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 마에스트로 대시보드 — 동작 방식 한 장 요약</title>
+<style>
+:root {
+  color-scheme: light;
+  --page:   #f4f4f1;
+  --surface:#ffffff;
+  --ink:    #0b0b0b;
+  --ink2:   #52514e;
+  --muted:  #6b6a65;   /* 흰 배경 대비 5.1:1 — 10~11px 보조 라벨에도 안전 */
+  --line:   #e1e0d9;
+
+  --navy:      #184f95;   /* ① 빌드 레인 · 서브 에이전트 */
+  --navy-tint: #eef4fc;
+  --navy-line: #b9d3f0;
+
+  --amber:      #8a6108;  /* 스킬 — 텍스트 대비 확보를 위해 어둡게 */
+  --amber-tint: #fdf4e2;
+  --amber-line: #ecd193;
+
+  --green:      #0a7d0a;  /* ② 런타임 레인 */
+  --green-tint: #eef6ee;
+  --green-line: #b7d9b7;
+
+  --shadow: 0 1px 2px rgba(11,11,11,.05), 0 8px 28px rgba(11,11,11,.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:#0b0b0b; --surface:#161615; --ink:#ffffff; --ink2:#c3c2b7; --muted:#a3a199; --line:#2c2c2a;
+    --navy:#5c9ff0;  --navy-tint:#101f33;  --navy-line:#2b4f7d;
+    --amber:#f0b643; --amber-tint:#2a2008; --amber-line:#6b5417;
+    --green:#5fbf5f; --green-tint:#0f1f0f; --green-line:#2f5a2f;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:#0b0b0b; --surface:#161615; --ink:#ffffff; --ink2:#c3c2b7; --muted:#a3a199; --line:#2c2c2a;
+  --navy:#5c9ff0;  --navy-tint:#101f33;  --navy-line:#2b4f7d;
+  --amber:#f0b643; --amber-tint:#2a2008; --amber-line:#6b5417;
+  --green:#5fbf5f; --green-tint:#0f1f0f; --green-line:#2f5a2f;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.45);
+}
+
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; height:100%; }
+body {
+  background: var(--page); color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: grid; place-items: center; min-height: 100vh; padding: 12px;
+}
+
+/* 16:9 한 장 — 뷰포트에 맞춰 통째로 축소되므로 스크롤이 생기지 않습니다 */
+.slide {
+  width: min(calc(100vw - 24px), calc((100vh - 24px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  container-type: inline-size;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.stage {
+  --px: 0.078125cqw;              /* 1280px 기준 설계 → 1px */
+  width: 100%; height: 100%;
+  padding: calc(20 * var(--px)) calc(26 * var(--px));
+  display: flex; flex-direction: column; gap: calc(12 * var(--px));
+}
+
+/* ---------- 머리말 ---------- */
+.head { display: flex; align-items: center; gap: calc(12 * var(--px)); }
+.mark {
+  width: calc(38 * var(--px)); height: calc(38 * var(--px)); flex: none;
+  border-radius: calc(10 * var(--px)); background: var(--navy); color: #fff;
+  display: grid; place-items: center; font-weight: 750; font-size: calc(13 * var(--px));
+  letter-spacing: .02em;
+}
+/* 다크 모드의 --navy는 밝은 파랑이라 흰 글자로는 대비가 2.3:1까지 떨어집니다 */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mark { color: #08111d; } }
+:root[data-theme="dark"] .mark { color: #08111d; }
+.head h1 { margin: 0; font-size: calc(25 * var(--px)); font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.head p  { margin: calc(3 * var(--px)) 0 0; font-size: calc(12.5 * var(--px)); color: var(--muted); }
+.chips { margin-left: auto; display: flex; gap: calc(7 * var(--px)); flex: none; }
+.chips span {
+  font-size: calc(11.5 * var(--px)); padding: calc(6 * var(--px)) calc(11 * var(--px));
+  border-radius: 999px; border: 1px solid var(--line); color: var(--ink2); white-space: nowrap;
+}
+.chips b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---------- 다이어그램 ---------- */
+.diagram { flex: 1; min-height: 0; display: flex; }
+.diagram svg { width: 100%; height: 100%; display: block; }
+
+/* SVG 안 텍스트 스타일 */
+.t-box   { font-size: 13px;   font-weight: 650; fill: var(--ink); }
+.t-sub   { font-size: 10.5px; fill: var(--muted); }
+.t-grp   { font-size: 12px;   font-weight: 700; }
+.t-tag   { font-size: 9.5px;  fill: var(--muted); }
+.t-pill  { font-size: 10px;   fill: var(--ink2); }
+.t-lane  { font-size: 11.5px; font-weight: 700; }
+.t-desc  { font-size: 11.5px; fill: var(--muted); }
+.t-note  { font-size: 10px;   fill: var(--muted); }
+.t-panel { font-size: 11.5px; font-weight: 700; fill: var(--green); }
+.flow    { fill: none; stroke: var(--muted); stroke-width: 1.4; }
+.flow-d  { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 5 4; }
+
+/* ---------- 아래 요약 카드 ---------- */
+.notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(12 * var(--px)); flex: none; }
+.note {
+  border: 1px solid var(--line); border-radius: calc(11 * var(--px));
+  padding: calc(11 * var(--px)) calc(13 * var(--px));
+  border-left-width: calc(3 * var(--px));
+}
+.note.n1 { border-left-color: var(--navy);  background: var(--navy-tint); }
+.note.n2 { border-left-color: var(--amber); background: var(--amber-tint); }
+.note.n3 { border-left-color: var(--green); background: var(--green-tint); }
+.note h3 { margin: 0; font-size: calc(13 * var(--px)); font-weight: 700; letter-spacing: -.01em; }
+.note.n1 h3 { color: var(--navy); }
+.note.n2 h3 { color: var(--amber); }
+.note.n3 h3 { color: var(--green); }
+.note p { margin: calc(4 * var(--px)) 0 0; font-size: calc(11.5 * var(--px)); line-height: 1.5; color: var(--ink2); }
+.note code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .95em; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="slide">
+<div class="stage">
+
+  <div class="head">
+    <div class="mark">AI</div>
+    <div>
+      <h1>AI 마에스트로 대시보드는 이렇게 동작합니다</h1>
+      <p>에이전트가 조립하고 · 구글 시트가 채우고 · 브라우저가 그립니다 — 부산대학교 자율 스터디 2026. 8. 24 → 10. 15</p>
+    </div>
+    <div class="chips">
+      <span>참가 <b>21</b>명</span>
+      <span>미션 <b>8</b>회차</span>
+      <span>파일 <b>1</b>개</span>
+      <span>갱신 <b>60</b>초</span>
+    </div>
+  </div>
+
+  <div class="diagram">
+  <svg viewBox="0 0 1200 465" role="img"
+       aria-label="위쪽은 메인 에이전트가 서브 에이전트와 스킬을 불러 index.html 한 파일을 만드는 빌드 흐름, 아래쪽은 구글 폼과 시트에 쌓인 제출 기록을 브라우저가 60초마다 읽어 계산하고 그리는 실행 흐름을 나타낸 다이어그램">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+        <path d="M0,1.2 L9.5,5 L0,8.8 z" fill="var(--muted)"></path>
+      </marker>
+    </defs>
+
+    <!-- ═══════════ ① 만드는 흐름 ═══════════ -->
+    <rect x="30" y="2" width="112" height="22" rx="11" fill="var(--navy-tint)" stroke="var(--navy-line)"></rect>
+    <text class="t-lane" x="86" y="17" text-anchor="middle" fill="var(--navy)">① 만드는 흐름</text>
+    <text class="t-desc" x="152" y="17">요구사항 하나로 메인 에이전트가 서브 에이전트와 스킬을 불러 화면을 조립합니다</text>
+
+    <!-- A1 요구사항 -->
+    <rect x="30" y="93" width="146" height="58" rx="10" fill="var(--navy-tint)" stroke="var(--navy-line)"></rect>
+    <text class="t-box" x="103" y="118" text-anchor="middle">요구사항</text>
+    <text class="t-sub" x="103" y="136" text-anchor="middle">운영 일정 · 명단 21명</text>
+
+    <!-- A2 메인 에이전트 -->
+    <rect x="206" y="93" width="146" height="58" rx="10" fill="var(--navy-tint)" stroke="var(--navy)" stroke-width="1.6"></rect>
+    <text class="t-box" x="279" y="118" text-anchor="middle">메인 에이전트</text>
+    <text class="t-sub" x="279" y="136" text-anchor="middle">계획 · 분배 · 통합</text>
+
+    <!-- 서브 에이전트 그룹 -->
+    <rect x="382" y="20" width="204" height="98" rx="11" fill="var(--navy-tint)" stroke="var(--navy-line)"></rect>
+    <text class="t-grp" x="394" y="39" fill="var(--navy)">서브 에이전트</text>
+    <text class="t-tag" x="574" y="39" text-anchor="end">병렬 실행</text>
+    <rect x="394" y="50" width="180" height="19" rx="6" fill="var(--surface)" stroke="var(--navy-line)"></rect>
+    <text class="t-pill" x="404" y="63.5">Explore · 자료·코드 탐색</text>
+    <rect x="394" y="72" width="180" height="19" rx="6" fill="var(--surface)" stroke="var(--navy-line)"></rect>
+    <text class="t-pill" x="404" y="85.5">Plan · 화면 구조 설계</text>
+    <rect x="394" y="94" width="180" height="19" rx="6" fill="var(--surface)" stroke="var(--navy-line)"></rect>
+    <text class="t-pill" x="404" y="107.5">Review · 검증·코드 리뷰</text>
+
+    <!-- 스킬 그룹 -->
+    <rect x="382" y="126" width="204" height="98" rx="11" fill="var(--amber-tint)" stroke="var(--amber-line)"></rect>
+    <text class="t-grp" x="394" y="145" fill="var(--amber)">스킬 (Skill)</text>
+    <text class="t-tag" x="574" y="145" text-anchor="end">재사용 규칙</text>
+    <rect x="394" y="156" width="180" height="19" rx="6" fill="var(--surface)" stroke="var(--amber-line)"></rect>
+    <text class="t-pill" x="404" y="169.5">dataviz · 색·차트 규칙</text>
+    <rect x="394" y="178" width="180" height="19" rx="6" fill="var(--surface)" stroke="var(--amber-line)"></rect>
+    <text class="t-pill" x="404" y="191.5">artifact-design · 레이아웃</text>
+    <rect x="394" y="200" width="180" height="19" rx="6" fill="var(--surface)" stroke="var(--amber-line)"></rect>
+    <text class="t-pill" x="404" y="213.5">docx·pptx · 문서 산출물</text>
+
+    <!-- A3 통합 -->
+    <rect x="616" y="93" width="146" height="58" rx="10" fill="var(--navy-tint)" stroke="var(--navy-line)"></rect>
+    <text class="t-box" x="689" y="118" text-anchor="middle">코드 통합</text>
+    <text class="t-sub" x="689" y="136" text-anchor="middle">한 파일로 합치기</text>
+
+    <!-- A4 산출물 -->
+    <rect x="792" y="93" width="176" height="58" rx="10" fill="var(--surface)" stroke="var(--navy)" stroke-width="1.6"></rect>
+    <text class="t-box" x="880" y="118" text-anchor="middle">index.html</text>
+    <text class="t-sub" x="880" y="136" text-anchor="middle">단일 파일 · 라이브러리 0</text>
+
+    <!-- A5 배포 -->
+    <rect x="998" y="93" width="172" height="58" rx="10" fill="var(--navy-tint)" stroke="var(--navy-line)"></rect>
+    <text class="t-box" x="1084" y="118" text-anchor="middle">GitHub Pages</text>
+    <text class="t-sub" x="1084" y="136" text-anchor="middle">링크만 열면 바로</text>
+
+    <!-- 빌드 레인 화살표 -->
+    <path class="flow" d="M176,122 L200,122" marker-end="url(#ah)"></path>
+    <path class="flow" d="M352,122 C367,122 367,69 376,69"   marker-end="url(#ah)"></path>
+    <path class="flow" d="M352,122 C367,122 367,175 376,175" marker-end="url(#ah)"></path>
+    <path class="flow" d="M586,69  C601,69  601,122 610,122" marker-end="url(#ah)"></path>
+    <path class="flow" d="M586,175 C601,175 601,122 610,122" marker-end="url(#ah)"></path>
+    <path class="flow" d="M762,122 L786,122" marker-end="url(#ah)"></path>
+    <path class="flow" d="M968,122 L992,122" marker-end="url(#ah)"></path>
+
+    <!-- ① → ② 이음새: 만든 파일이 곧 실행 파일 -->
+    <path class="flow-d" d="M880,151 V240 Q880,250 870,250 H450 Q440,250 440,260 V284" marker-end="url(#ah)"></path>
+    <text class="t-note" x="660" y="243" text-anchor="middle">만들어진 파일이 그대로 실행됩니다</text>
+
+    <!-- ═══════════ ② 동작하는 흐름 ═══════════ -->
+    <rect x="30" y="258" width="124" height="22" rx="11" fill="var(--green-tint)" stroke="var(--green-line)"></rect>
+    <text class="t-lane" x="92" y="273" text-anchor="middle" fill="var(--green)">② 동작하는 흐름</text>
+    <text class="t-desc" x="164" y="273">구글 시트에 쌓인 제출 기록을 브라우저가 읽어 계산하고 60초마다 다시 그립니다</text>
+
+    <!-- B1 폼 -->
+    <rect x="30" y="318" width="146" height="58" rx="10" fill="var(--green-tint)" stroke="var(--green-line)"></rect>
+    <text class="t-box" x="103" y="343" text-anchor="middle">구글 폼 제출</text>
+    <text class="t-sub" x="103" y="361" text-anchor="middle">참가자 21명</text>
+
+    <!-- B2 시트 -->
+    <rect x="206" y="318" width="146" height="58" rx="10" fill="var(--green-tint)" stroke="var(--green-line)"></rect>
+    <text class="t-box" x="279" y="343" text-anchor="middle">구글 시트 2탭</text>
+    <text class="t-sub" x="279" y="361" text-anchor="middle">명단 · 제출 기록</text>
+
+    <!-- 브라우저 실행 패널 -->
+    <rect x="382" y="290" width="788" height="118" rx="12" fill="var(--green-tint)" stroke="var(--green-line)"></rect>
+    <text class="t-panel" x="396" y="310">브라우저에서 실행되는 index.html</text>
+    <text class="t-note" x="396" y="400">표시 모드 — 실데이터 · 명단만 · 샘플 미리보기(이름 자동 마스킹)</text>
+
+    <rect x="396" y="318" width="172" height="58" rx="9" fill="var(--surface)" stroke="var(--green-line)"></rect>
+    <text class="t-box" x="482" y="343" text-anchor="middle">fetch</text>
+    <text class="t-sub" x="482" y="361" text-anchor="middle">CSV 두 개 동시 요청</text>
+
+    <rect x="592" y="318" width="172" height="58" rx="9" fill="var(--surface)" stroke="var(--green-line)"></rect>
+    <text class="t-box" x="678" y="343" text-anchor="middle">파싱 · 정규화</text>
+    <text class="t-sub" x="678" y="361" text-anchor="middle">열 이름 · 이름 표기 통일</text>
+
+    <rect x="788" y="318" width="172" height="58" rx="9" fill="var(--surface)" stroke="var(--green)" stroke-width="1.6"></rect>
+    <text class="t-box" x="874" y="343" text-anchor="middle">계산 엔진</text>
+    <text class="t-sub" x="874" y="361" text-anchor="middle">완료율 · 이탈 위험 · 점수</text>
+
+    <rect x="984" y="318" width="172" height="58" rx="9" fill="var(--surface)" stroke="var(--green-line)"></rect>
+    <text class="t-box" x="1070" y="343" text-anchor="middle">화면 렌더</text>
+    <text class="t-sub" x="1070" y="361" text-anchor="middle">KPI · 히트맵 · 리더보드</text>
+
+    <!-- 런타임 화살표 -->
+    <path class="flow" d="M176,347 L200,347" marker-end="url(#ah)"></path>
+    <path class="flow" d="M352,347 L376,347" marker-end="url(#ah)"></path>
+    <path class="flow" d="M568,347 L586,347" marker-end="url(#ah)"></path>
+    <path class="flow" d="M764,347 L782,347" marker-end="url(#ah)"></path>
+    <path class="flow" d="M960,347 L978,347" marker-end="url(#ah)"></path>
+
+    <!-- 60초 갱신 루프 -->
+    <path class="flow-d" d="M1070,376 V420 Q1070,430 1060,430 H289 Q279,430 279,420 V382" marker-end="url(#ah)"></path>
+    <text class="t-note" x="700" y="452" text-anchor="middle">60초마다 자동 반복 — 새 제출이 화면에 바로 반영됩니다</text>
+  </svg>
+  </div>
+
+  <div class="notes">
+    <div class="note n1">
+      <h3>서브 에이전트 — 일을 쪼갠다</h3>
+      <p>탐색·설계·검증을 서로 다른 에이전트가 나눠 맡습니다. 하나가 전부를 떠안지 않으니 병렬로 빨라지고, 검증하는 눈이 만든 눈과 분리됩니다.</p>
+    </div>
+    <div class="note n2">
+      <h3>스킬 — 판단을 굳혀 재사용한다</h3>
+      <p>색 팔레트, 레이아웃, 문서 서식처럼 매번 똑같이 내리는 판단을 규칙으로 저장해 둡니다. 다음 작업에서 사람이 다시 설명할 필요가 없습니다.</p>
+    </div>
+    <div class="note n3">
+      <h3>산출물 — 파일 하나</h3>
+      <p>빌드도 서버도 없습니다. <code>index.html</code> 하나가 전부이며, 구글 시트만 채우면 21명 × 8회차가 60초 안에 화면에 반영됩니다.</p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+</body>
+</html>
