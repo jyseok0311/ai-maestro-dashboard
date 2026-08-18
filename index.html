@@ -270,8 +270,15 @@ section { margin-top: 34px; }
 
 /* ---------- 히트맵 ---------- */
 .hm-scroll { overflow-x: auto; padding: 4px 14px 16px; }
-.hm { display: grid; gap: 2px; min-width: 720px; }           /* 2px 표면 간격 = 유일한 구분선 */
-.hm-row { display: grid; grid-template-columns: 176px repeat(8, minmax(52px, 1fr)) 78px; gap: 2px; }
+/* 칸 너비에 상한을 두어 격자가 옆으로 늘어지지 않게 합니다.
+   (이전에는 1fr이라 칸이 112×34px까지 벌어져 기호 하나에 여백이 과했습니다)
+   남는 가로 공간은 격자를 가운데 두어 의도적으로 보이게 합니다. */
+.hm { display: grid; gap: 2px; min-width: 720px; }
+/* 칸이 상한에 걸려 남는 가로 여백은 격자를 가운데로 모아 의도적으로 보이게 합니다 */
+.hm-row {
+  display: grid; grid-template-columns: 200px repeat(8, minmax(52px, 88px)) 72px;
+  gap: 2px; justify-content: center;
+}
 .hm-head .hcell {
   font-size: 11.5px; color: var(--muted); font-weight: 650; text-align: center;
   padding: 6px 2px 8px; line-height: 1.25;
@@ -281,7 +288,7 @@ section { margin-top: 34px; }
 .name-cell {
   display: flex; align-items: center; gap: 8px; padding: 0 8px;
   font-size: 13px; border-radius: 8px; cursor: pointer; background: var(--surface-2);
-  min-height: 34px; text-align: left; border: none; color: var(--ink); font-family: inherit;
+  min-height: 30px; text-align: left; border: none; color: var(--ink); font-family: inherit;
 }
 .name-cell:hover { outline: 2px solid var(--brand); outline-offset: -2px; }
 .name-cell .no { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; width: 16px; }
@@ -292,8 +299,8 @@ section { margin-top: 34px; }
 .name-cell .dp { font-size: var(--fs-xs); color: var(--muted); font-weight: 500; }
 
 .cell {
-  min-height: 34px; border-radius: 8px; display: grid; place-items: center;
-  font-size: 13px; font-weight: 700; cursor: default; position: relative;
+  min-height: 30px; border-radius: 7px; display: grid; place-items: center;
+  font-size: var(--fs-sm); font-weight: 700; cursor: default; position: relative;
 }
 .cell.done   { background: var(--good);        color: var(--cell-ink-on-good); }
 .cell.imm    { background: var(--warning);     color: var(--cell-ink-on-warn); }
@@ -350,7 +357,44 @@ section { margin-top: 34px; }
 .mcard.is-cur { outline: 2px solid color-mix(in srgb, var(--brand) 55%, transparent); outline-offset: -1px; }
 .mcard.is-fut { opacity: .62; }
 
-/* 교육 다시보기 카드 — 미션 카드와 같은 골격에 링크 버튼 두 개 */
+/* 교육 다시보기 — 카드가 아니라 리스트.
+   미션 카드 8개와 같은 모양이 연달아 나오면 화면에 리듬이 없어지고,
+   교육 자료는 '읽는 것'이 아니라 '찾아가는 것'이라 한 줄이 더 맞습니다. */
+.edu-list { display: flex; flex-direction: column; }
+.erow {
+  display: grid; grid-template-columns: 52px 1fr auto; gap: 14px; align-items: center;
+  padding: 9px 16px; border-bottom: 1px solid var(--line);
+}
+/* 리스트 안의 버튼은 카드보다 작게 — 행 높이를 낮춰 8줄이 한눈에 들어오게 */
+.erow .lbtn { padding: 6px 11px; font-size: var(--fs-sm); }
+.erow:last-child { border-bottom: none; }
+.erow:hover { background: var(--surface-2); }
+.erow.upcoming { opacity: .6; }
+.erow .n {
+  font-size: var(--fs-sm); font-weight: 700; text-align: center;
+  padding: 4px 0; border-radius: 7px;
+  background: color-mix(in srgb, var(--brand) 12%, var(--surface));
+  color: var(--brand-ink); border: 1px solid color-mix(in srgb, var(--brand) 24%, transparent);
+}
+.erow .body { min-width: 0; }
+.erow .ttl { font-size: var(--fs-md); font-weight: 680; letter-spacing: -0.01em; }
+.erow .meta {
+  font-size: var(--fs-sm); color: var(--muted); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.erow .acts { display: flex; gap: 8px; flex: none; }
+@media (max-width: 700px) {
+  .erow { grid-template-columns: 52px 1fr; row-gap: 10px; }
+  .erow .acts { grid-column: 1 / -1; }
+  .erow .acts .lbtn { flex: 1; }
+  /* 좁은 화면에서는 설명을 2줄까지만 — 8줄이 과하게 길어지지 않게 */
+  .erow .meta {
+    white-space: normal;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+}
+
+/* (구) 교육 카드 잔여 스타일 — 미션 카드와 공유하는 요소들 */
 .ecard .rel {
   margin-left: auto; font-size: 11px; font-weight: 650; padding: 2px 7px; border-radius: 999px;
   background: color-mix(in srgb, var(--brand) 12%, var(--surface));
@@ -567,7 +611,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
       <h2>AI 교육 다시보기</h2>
       <p>총 8회 · 영상과 자료(Padlet)를 다시 볼 수 있습니다</p>
     </div>
-    <div class="missions" id="edu"></div>
+    <div class="card edu-list" id="edu"></div>
   </section>
 
   <!-- ④ 이탈 위험 -->
@@ -1033,28 +1077,26 @@ function renderEdu() {
   box.innerHTML = "";
   EDU.forEach(e => {
     const has = !!(e.video || e.doc);
-    const c = el("div", "card mcard ecard" + (has ? "" : " is-fut"));
+    const r = el("div", "erow" + (has ? "" : " upcoming"));
     const d = parseDate(e.date);
     const wd = ["일","월","화","수","목","금","토"][d.getDay()];
-    c.innerHTML = `
-      <div class="top">
-        <span class="rd">${e.n}차</span>
-        <span class="dd">${fmtMD(d)}(${wd})</span>
-        ${e.rel ? `<span class="rel">미션 ${e.rel} 관련</span>` : ""}
+    r.innerHTML = `
+      <div class="n">${e.n}차</div>
+      <div class="body">
+        <div class="ttl">${esc(e.title)}</div>
+        <div class="meta">${fmtMD(d)}(${wd})${e.rel ? " · 미션 " + e.rel + " 관련" : ""} · ${esc(e.desc)}</div>
       </div>
-      <h3>${esc(e.title)}</h3>
-      <div class="desc">${esc(e.desc)}</div>
-      <div class="links">
+      <div class="acts">
         ${e.video
           ? `<a class="lbtn play" href="${esc(e.video)}" target="_blank" rel="noopener noreferrer">
-               <span class="i" aria-hidden="true">▶</span> 영상 보기</a>`
-          : `<span class="lbtn play" aria-disabled="true"><span class="i" aria-hidden="true">▶</span> 진행 예정</span>`}
+               <span class="i" aria-hidden="true">▶</span> 영상</a>`
+          : `<span class="lbtn play" aria-disabled="true"><span class="i" aria-hidden="true">▶</span> 예정</span>`}
         ${e.doc
           ? `<a class="lbtn" href="${esc(e.doc)}" target="_blank" rel="noopener noreferrer">
-               <span aria-hidden="true">📄</span> 교육 자료</a>`
-          : `<span class="lbtn" aria-disabled="true"><span aria-hidden="true">📄</span> 자료 준비 중</span>`}
+               <span aria-hidden="true">📄</span> 자료</a>`
+          : `<span class="lbtn" aria-disabled="true"><span aria-hidden="true">📄</span> 준비 중</span>`}
       </div>`;
-    box.appendChild(c);
+    box.appendChild(r);
   });
   eduDrawn = true;
 }
