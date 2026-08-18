@@ -152,6 +152,16 @@ header.topbar {
   background: color-mix(in srgb, var(--brand) 15%, var(--surface-2));
   color: var(--brand-ink);
 }
+/* 누를 수 있는 칩 — 칩 계열의 예외이므로 ⓘ 아이콘·커서·호버·포커스로
+   '누를 수 있음'을 분명히 알립니다. 아이콘 없이 커서만 바꾸면 알아채기 어렵습니다. */
+.chip.link {
+  cursor: pointer; gap: 5px; font-family: inherit;
+  transition: background .12s ease;
+}
+.chip.link .ico { color: var(--muted); font-size: 11px; }
+.chip.link:hover { background: color-mix(in srgb, var(--brand) 18%, var(--surface-2)); color: var(--ink); }
+.chip.link:hover .ico { color: var(--brand-ink); }
+.chip.link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .iconbtn {
   border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
@@ -190,8 +200,13 @@ header.topbar {
   /* 높이(36px)는 유지하고 가로 여백만 줄여 정렬이 흐트러지지 않게 합니다 */
   .cta { padding: 0 13px; }
   .navlink { padding: 0 11px; }
-  .topbar .chips { display: none; }
+  /* 정보 칩은 바로 아래 KPI와 중복이라 숨기지만,
+     누를 수 있는 칩(성과공유회 안내)은 모바일에서도 유일한 진입점이라 남깁니다 */
+  .topbar .chip:not(.link) { display: none; }
   .brandmark p { display: none; }
+  /* 컨트롤이 한 줄 늘어나므로 여백을 조여 sticky 높이를 억제합니다 */
+  .topbar-in { padding: 9px 16px; gap: 9px; }
+  .chips { gap: 6px; }
 }
 
 /* ---------- 데모 배너 ---------- */
@@ -725,6 +740,23 @@ const MISSIONS = [
 ];
 
 /* ============================================================
+   2-1. 성과공유회 — 출처: 「AI 마에스트로 운영 일정 안내」
+   상단 '성과공유회' 칩을 누르면 안내 패널로 열립니다.
+   ============================================================ */
+const SHOWCASE = {
+  date : "2026-10-30",
+  time : "14:00 ~ 16:40",
+  place: "대학본부 본관 3층 대강당",
+  who  : "AI 마에스트로 21명 + 스터디 참여 부서 인원 79명 (약 100명 예상)",
+  agenda: [
+    ["14:00 ~ 14:30", "AI 마에스트로 AI 에이전트 우수 사례 영상 시청", "30분"],
+    ["14:30 ~ 16:30", "AX 특강 (AI그라운드 장병준 대표)",              "120분"],
+    ["16:30 ~ 16:40", "공유회 마무리",                                  "10분"]
+  ],
+  prep: "8회차 미션까지 마치면 개인 AI Agent와 발표 자료가 완성됩니다. 우수 사례는 영상으로 소개될 예정입니다."
+};
+
+/* ============================================================
    2-2. AI 교육 다시보기 (2026. 6. 19. ~ 8. 21., 총 8회)
    자율 스터디 미션은 교육 내용을 복습·적용하는 활동이므로,
    각 회차에 관련 미션 번호(rel)를 연결해 바로 찾아갈 수 있게 합니다.
@@ -1148,7 +1180,10 @@ function renderTop(D) {
     chips.push(`<span class="chip accent">${cur ? "진행 중 <b>" + cur.round + "회차</b> · D-" + cur.dday : "<b>전 회차 마감</b>"}</span>`);
   }
   chips.push(`<span class="chip">참가 <b>${D.rows.length}</b>명</span>`);
-  chips.push(`<span class="chip">성과공유회 <b>${dd > 0 ? "D-" + dd : dd === 0 ? "오늘" : "종료"}</b></span>`);
+  // 이 칩만 누를 수 있으므로 button + ⓘ 로 상호작용을 명시합니다
+  chips.push(`<button class="chip link" id="showcaseChip" title="성과공유회 안내 보기">
+    성과공유회 <b>${dd > 0 ? "D-" + dd : dd === 0 ? "오늘" : "종료"}</b>
+    <span class="ico" aria-hidden="true">ⓘ</span></button>`);
   $("#topChips").innerHTML = chips.join("");
 }
 
@@ -1432,11 +1467,46 @@ function openDrawer(r, D) {
           </span></div>`;
       }).join("")}
     </div>`;
+  DRAWER.openRowNo = r.no;
+  showPanel("참가자 상세");
+}
+
+/* 성과공유회 안내 패널 */
+function openShowcase() {
+  const d = parseDate(SHOWCASE.date);
+  const dd = dayDiff(d, STATE.today);
+  const wd = ["일","월","화","수","목","금","토"][d.getDay()];
+  const dLabel = dd > 0 ? `D-${dd}` : dd === 0 ? "오늘" : "종료";
+  $("#drawerBody").innerHTML = `
+    <h3>성과공유회 <span class="badge b" style="vertical-align:middle">${dLabel}</span></h3>
+    <div class="dept">${fmtFull(d)}(${wd}) ${SHOWCASE.time} · ${esc(SHOWCASE.place)}</div>
+    <div class="d-stats" style="grid-template-columns:1fr 1fr">
+      <div><div class="l">일시</div><div class="v" style="font-size:16px">${fmtMD(d)}(${wd})</div></div>
+      <div><div class="l">남은 기간</div><div class="v" style="font-size:16px">${dLabel}</div></div>
+    </div>
+    <div style="font-size:12.5px;color:var(--muted);margin-top:12px">참석 대상</div>
+    <div style="font-size:13px;margin-top:2px">${esc(SHOWCASE.who)}</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-top:14px">세부 일정</div>
+    <div class="d-list" style="margin-top:4px">
+      ${SHOWCASE.agenda.map(([t, what, dur]) => `
+        <div class="d-item">
+          <span class="st lg-open" style="font-size:10px">▸</span>
+          <span class="bd">
+            <span class="ti">${esc(what)}</span>
+            <span class="me">${esc(t)} · ${esc(dur)}</span>
+          </span></div>`).join("")}
+    </div>
+    <div class="ok-note" style="margin-top:14px"><span class="ic">ℹ</span> ${esc(SHOWCASE.prep)}</div>`;
+  showPanel("성과공유회 안내");
+}
+
+/* 패널 열기 공용 처리 — 참가자 상세와 성과공유회 안내가 같은 창을 씁니다.
+   (포커스 이동·배경 inert·스크롤 잠금이 한 곳에만 있게) */
+function showPanel(label) {
+  $("#drawer .panel").setAttribute("aria-label", label);
   $("#drawer").classList.add("on");
   $("#drawer").setAttribute("aria-hidden", "false");
-  // 포커스를 패널로 옮기고, 배경은 조작 불가 상태로 둡니다
   DRAWER.lastFocus = document.activeElement;
-  DRAWER.openRowNo = r.no;
   document.querySelectorAll(".wrap, header.topbar").forEach(n => n.setAttribute("inert", ""));
   document.body.style.overflow = "hidden";
   $("#drawer .close").focus();
@@ -1624,6 +1694,11 @@ function bindEvents() {
   $("#modeBox").addEventListener("click", e => {
     const b = e.target.closest("[data-mode]");
     if (b) setMode(b.dataset.mode);
+  });
+
+  // 성과공유회 칩 — 칩도 render()마다 다시 그려지므로 위임 처리
+  $("#topChips").addEventListener("click", e => {
+    if (e.target.closest("#showcaseChip")) openShowcase();
   });
 
   // 시점 시뮬레이터 (샘플 모드에서만 노출)
