@@ -25,6 +25,7 @@
   --brand:           #184f95;   /* 포인트 컬러(부산대 네이비) — 크롬·단일계열 막대 */
   --brand-soft:      #cde2fb;   /* 막대 트랙(같은 계열의 밝은 단계) */
   --brand-ink:       #0d366b;
+  --cta-ink:         #ffffff;   /* 브랜드 버튼 위 글자 — 라이트에선 흰색이 8.1:1 */
 
   --good:            #0a7d0a;   /* 완료 — 흰색 ✓ 대비 5.3:1 확보를 위해 어둡게 (CVD 재검증 통과) */
   --warning:         #fab219;   /* 마감 임박 미제출 */
@@ -53,6 +54,8 @@
     --brand:         #3987e5;
     --brand-soft:    #184f95;
     --brand-ink:     #9ec5f4;
+    /* 다크의 밝은 브랜드색 위에서는 흰 글자가 3.6:1로 미달 → 어두운 글자(5.4:1) */
+    --cta-ink:       #0b1220;
     --neutral:       #6b6a64;
     --neutral-soft:  #2c2c2a;
     --cell-ink-on-neut: #f2f2ee;
@@ -72,6 +75,7 @@
   --brand:         #3987e5;
   --brand-soft:    #184f95;
   --brand-ink:     #9ec5f4;
+  --cta-ink:       #0b1220;   /* 밝은 브랜드색 위 어두운 글자 (5.4:1) */
   --neutral:       #6b6a64;
   --neutral-soft:  #2c2c2a;
   --cell-ink-on-neut: #f2f2ee;
@@ -135,6 +139,29 @@ header.topbar {
   border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
 }
 .navlink:hover { background: var(--surface-2); color: var(--ink); }
+
+/* 미션 제출 버튼 — 대시보드의 주 행동(primary CTA).
+   상단바가 sticky라 스크롤해도 항상 손에 닿습니다. */
+.cta {
+  font: inherit; font-size: 13px; font-weight: 680; text-decoration: none; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 15px; border-radius: 9px; border: 1px solid transparent;
+  background: var(--brand); color: var(--cta-ink);
+}
+.cta:hover { filter: brightness(1.1); }
+.cta:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.cta .i { font-size: 12px; }
+/* 진행 중 미션 카드 안의 제출 버튼 — 마감이 보이는 자리에서 바로 제출 */
+.mcard .cta { width: 100%; justify-content: center; margin-top: 10px; }
+/* 좁은 화면: 상단바가 sticky라 높으면 화면을 계속 가립니다.
+   칩(진행 회차·참가 인원·D-day)과 부제는 바로 아래 KPI 카드에 그대로 있어
+   숨겨도 정보 손실이 없습니다. 제출 버튼은 남깁니다. */
+@media (max-width: 560px) {
+  .cta { padding: 8px 12px; }
+  .navlink { padding: 6px 10px; font-size: 12px; }
+  .topbar .chips { display: none; }
+  .brandmark p { display: none; }
+}
 
 /* ---------- 데모 배너 ---------- */
 .demo-banner {
@@ -436,6 +463,9 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
     <div class="chips" id="topChips"></div>
     <a class="navlink" href="how-it-works.html"
        title="이 대시보드가 어떻게 동작하는지 한 장으로 보기">동작 방식 ↗</a>
+    <a class="cta" id="submitCta" target="_blank" rel="noopener noreferrer"
+       title="구글 폼이 새 창에서 열립니다 (학교 구글 계정 로그인 필요)">
+       <span class="i" aria-hidden="true">✎</span> 미션 제출하기</a>
     <button class="iconbtn" id="themeBtn" title="라이트/다크 전환" aria-label="라이트/다크 전환">◐</button>
   </div>
 </header>
@@ -583,6 +613,8 @@ const CONFIG = {
   PEER_TARGET     : 79,   // 성과공유회 기준 부서 참여 인원 목표
   START_DATE      : "2026-08-24",
   SHOWCASE_DATE   : "2026-10-30",
+  // 미션 제출 폼 — 상단 '미션 제출하기' 버튼과 진행 중 미션 카드에서 열립니다
+  FORM_URL        : "https://docs.google.com/forms/d/e/1FAIpQLSd4-eKMEydQ9bD5iMDOi5x0wbGgJTg3-Jr-Zu0cFBF--r3vng/viewform",
   IMMINENT_DAYS   : 3     // 마감 N일 이내면 '임박'
 };
 
@@ -1220,7 +1252,11 @@ function renderMissions(D) {
       <details style="margin-top:6px">
         <summary style="font-size:12px;color:var(--muted);cursor:pointer">수행 지침</summary>
         <p class="out" style="margin:6px 0 0">${esc(m.desc)}</p>
-      </details>`;
+      </details>
+      ${(m.phase === "current" && CONFIG.FORM_URL)
+        ? `<a class="cta" href="${esc(CONFIG.FORM_URL)}" target="_blank" rel="noopener noreferrer">
+             <span class="i" aria-hidden="true">✎</span> ${m.round}회차 제출하기</a>`
+        : ""}`;
     box.appendChild(c);
   });
 }
@@ -1536,6 +1572,10 @@ function updateSimLabel() {
 async function init() {
   STATE.today = startOfDay(new Date());
   bindEvents();
+
+  // 제출 폼 링크 연결 — URL이 비어 있으면 버튼을 숨겨 죽은 링크를 노출하지 않습니다
+  const cta = $("#submitCta");
+  if (CONFIG.FORM_URL) cta.href = CONFIG.FORM_URL; else cta.remove();
 
   // 공개 배포에서는 이름 마스킹을 항상 켠 채로 잠급니다
   if (FORCE_MASK) {
