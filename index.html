@@ -410,14 +410,11 @@ section { margin-top: 34px; }
 }
 .erow .acts { display: flex; gap: 8px; flex: none; }
 @media (max-width: 700px) {
-  .erow { grid-template-columns: 52px 1fr; row-gap: 10px; }
-  .erow .acts { grid-column: 1 / -1; }
-  .erow .acts .lbtn { flex: 1; }
-  /* 좁은 화면에서는 설명을 2줄까지만 — 8줄이 과하게 길어지지 않게 */
-  .erow .meta {
-    white-space: normal;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  }
+  /* 버튼을 아래 줄로 내리면 행이 두 배로 높아집니다.
+     버튼 라벨을 줄여 3열을 유지하는 편이 8줄 전체 길이에 훨씬 유리합니다. */
+  .erow { grid-template-columns: 46px minmax(0, 1fr) auto; gap: 10px; }
+  .erow .acts { gap: 6px; }
+  .erow .acts .lbtn { padding: 0 9px; gap: 4px; }
 }
 
 /* (구) 교육 카드 잔여 스타일 — 미션 카드와 공유하는 요소들 */
@@ -537,6 +534,52 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
 @media (max-width: 640px) {
   .kpi.hero .val { font-size: 38px; }
   .d-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   모바일 최적화 (<=640px)
+   측정 결과 375px에서 전체 6.7화면(5471px)이었고, 그중 미션 섹션이 1737px,
+   교육이 1089px 였습니다. 정보를 지우지 않고 밀도를 올려 스크롤을 줄입니다.
+   ============================================================ */
+@media (max-width: 640px) {
+  /* ① 미션 카드 — 1열 세로 나열(8x201px)이라 가장 길었습니다.
+     내용이 짧아 2열로 충분하고, 높이가 절반 가까이 줄어듭니다. */
+  .missions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .mcard { padding: 11px 12px; gap: 4px; }
+  .mcard .top { flex-wrap: wrap; gap: 5px; }
+  .mcard .dd { margin-left: 0; }
+  .mcard h3 { font-size: var(--fs-base); }
+  .mcard .out { font-size: var(--fs-xs); }
+  .mcard .stat b { font-size: 17px; }
+  .mcard .stat span { font-size: var(--fs-xs); }
+  /* 진행 중 회차의 제출 버튼은 2열을 가로질러 눈에 띄게 */
+  .mcard.is-cur { grid-column: 1 / -1; }
+
+  /* ② 교육 리스트 — 설명 줄이 행마다 2줄을 차지했습니다.
+     날짜와 관련 미션만 남기면 '찾아가는' 목적에는 충분합니다. */
+  .erow { padding: 10px 14px; gap: 10px; }
+  .erow .meta .desc-part { display: none; }
+  .erow .ttl { font-size: var(--fs-base); }
+
+  /* ③ 터치 타깃 — 44px 기준에 못 미치던 요소들을 키웁니다. */
+  .name-cell { min-height: 38px; }
+  .cell { min-height: 38px; }
+  .erow .lbtn, .lbtn { min-height: 40px; }
+  .mcard details summary { padding: 6px 0; }
+  .filters .toggle { min-height: 40px; display: inline-flex; align-items: center; }
+  .filters select, .filters input { min-height: 40px; }
+}
+
+/* ④ 히트맵 가로 스크롤 시 이름 열 고정 —
+   375px 화면에서는 8개 회차가 한 번에 들어오지 않아 옆으로 밀어 봐야 하는데,
+   이름이 같이 밀려 나가면 누구의 행인지 알 수 없게 됩니다. */
+@media (max-width: 900px) {
+  .hm-row { justify-content: start; }
+  .name-cell {
+    position: sticky; left: 0; z-index: 2;
+    box-shadow: 6px 0 8px -6px rgba(0,0,0,.28);
+  }
+  .hm-head .hcell:first-child { position: sticky; left: 0; z-index: 2; background: var(--surface); }
 }
 </style>
 </head>
@@ -1127,7 +1170,7 @@ function renderEdu() {
       <div class="n">${e.n}차</div>
       <div class="body">
         <div class="ttl">${esc(e.title)}</div>
-        <div class="meta">${fmtMD(d)}(${wd})${e.rel ? " · 미션 " + e.rel + " 관련" : ""} · ${esc(e.desc)}</div>
+        <div class="meta">${fmtMD(d)}(${wd})${e.rel ? " · 미션 " + e.rel + " 관련" : ""}<span class="desc-part"> · ${esc(e.desc)}</span></div>
       </div>
       <div class="acts">
         ${e.video
