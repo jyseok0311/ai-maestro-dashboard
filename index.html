@@ -832,33 +832,39 @@ const EDU = [
 ];
 
 /* ============================================================
-   3-1. 확정 명단 (실제 데이터)
+   3-1. 확정 명단 (21명) — 이름은 마스킹된 값만 둡니다
    출처: 「추천선발 직원 명단v3.0.xlsx」 · AI 마에스트로 선발 명단 21명
-   이메일·닉네임은 원본에 없어 비어 있습니다. 구글 시트 참가자 탭에서 채우면
-   상세 패널과 리더보드에 자동 반영됩니다.
+
+   ※ 이 파일은 GitHub Pages로 공개 배포되므로, 소스 보기만 해도 내용이 노출됩니다.
+     「AI 자율스터디 보안 서약서」 4항(식별정보는 삭제·치환 후 사용)에 따라
+     실명 대신 마스킹된 이름(예: 홍*동)만 둡니다. 이메일은 넣지 않습니다.
+     실명 원본은 로컬 '구글시트_참가자탭.csv' 와 명단 xlsx 에만 보관합니다.
+
+   이 배열은 구글 시트를 읽지 못할 때만 쓰이는 대체 명단입니다.
+   시트가 연결되면 시트의 값이 우선합니다.
    ============================================================ */
 const ROSTER = [
-  { no: 1,  name:"장성빈", dept:"교무과",           email:"", nick:"" },
-  { no: 2,  name:"김승혁", dept:"교수학습지원센터", email:"", nick:"" },
-  { no: 3,  name:"홍지섭", dept:"성과관리센터",     email:"", nick:"" },
-  { no: 4,  name:"박효진", dept:"대학원혁신실",     email:"", nick:"" },
-  { no: 5,  name:"이상대", dept:"총무과",           email:"", nick:"" },
-  { no: 6,  name:"지수현", dept:"학생과",           email:"", nick:"" },
-  { no: 7,  name:"최은주", dept:"취업전략과",       email:"", nick:"" },
-  { no: 8,  name:"조건",   dept:"정보화기획운영과", email:"", nick:"" },
-  { no: 9,  name:"김근수", dept:"연구진흥과",       email:"", nick:"" },
-  { no: 10, name:"김상현", dept:"재무과",           email:"", nick:"" },
-  { no: 11, name:"이동욱", dept:"시설과",           email:"", nick:"" },
-  { no: 12, name:"박진형", dept:"입학과",           email:"", nick:"" },
-  { no: 13, name:"이동현", dept:"국제협력실",       email:"", nick:"" },
-  { no: 14, name:"노은유", dept:"AX혁신과",         email:"", nick:"" },
-  { no: 15, name:"김정목", dept:"정보화기획운영과", email:"", nick:"" },
-  { no: 16, name:"진한룡", dept:"정보개발과",       email:"", nick:"" },
-  { no: 17, name:"송재학", dept:"정보운영과",       email:"", nick:"" },
-  { no: 18, name:"손환희", dept:"교육혁신실",       email:"", nick:"" },
-  { no: 19, name:"박채언", dept:"에듀테크센터",     email:"", nick:"" },
-  { no: 20, name:"박정우", dept:"캠퍼스기획과",     email:"", nick:"" },
-  { no: 21, name:"송륜화", dept:"학사과",           email:"", nick:"" }
+  { no: 1,  name:"장*빈", dept:"교무과",           email:"", nick:"" },
+  { no: 2,  name:"김*혁", dept:"교수학습지원센터", email:"", nick:"" },
+  { no: 3,  name:"홍*섭", dept:"성과관리센터",     email:"", nick:"" },
+  { no: 4,  name:"박*진", dept:"대학원혁신실",     email:"", nick:"" },
+  { no: 5,  name:"이*대", dept:"총무과",           email:"", nick:"" },
+  { no: 6,  name:"지*현", dept:"학생과",           email:"", nick:"" },
+  { no: 7,  name:"최*주", dept:"취업전략과",       email:"", nick:"" },
+  { no: 8,  name:"조*",   dept:"정보화기획운영과", email:"", nick:"" },
+  { no: 9,  name:"김*수", dept:"연구진흥과",       email:"", nick:"" },
+  { no: 10, name:"김*현", dept:"재무과",           email:"", nick:"" },
+  { no: 11, name:"이*욱", dept:"시설과",           email:"", nick:"" },
+  { no: 12, name:"박*형", dept:"입학과",           email:"", nick:"" },
+  { no: 13, name:"이*현", dept:"국제협력실",       email:"", nick:"" },
+  { no: 14, name:"노*유", dept:"AX혁신과",         email:"", nick:"" },
+  { no: 15, name:"김*목", dept:"정보화기획운영과", email:"", nick:"" },
+  { no: 16, name:"진*룡", dept:"정보개발과",       email:"", nick:"" },
+  { no: 17, name:"송*학", dept:"정보운영과",       email:"", nick:"" },
+  { no: 18, name:"손*희", dept:"교육혁신실",       email:"", nick:"" },
+  { no: 19, name:"박*언", dept:"에듀테크센터",     email:"", nick:"" },
+  { no: 20, name:"박*우", dept:"캠퍼스기획과",     email:"", nick:"" },
+  { no: 21, name:"송*화", dept:"학사과",           email:"", nick:"" }
 ];
 
 /* ============================================================
@@ -1037,7 +1043,7 @@ function computeAll() {
   const current = missions.find(m => m.phase === "current") || null;
 
   // 이름 → 회차 → 제출
-  // 이름은 정규화 키로 매칭하고('장 성빈' = '장성빈'), 같은 회차 중복 제출은
+  // 이름은 정규화 키로 매칭하고('홍 길동' = '홍길동'), 같은 회차 중복 제출은
   // 시트 행 순서가 아니라 '가장 이른 타임스탬프'를 채택합니다.
   const byName = new Map();
   const rosterKeys = new Set(STATE.participants.map(p => nameKey(p.name)));
@@ -1614,7 +1620,7 @@ function toLink(v) {
   if (!s || /^https?:\/\//i.test(s)) return s;
   return /^[^\s]+\.[^\s]+/.test(s) ? "https://" + s : s;   // 도메인처럼 보일 때만 보정
 }
-// 이름 매칭 키 — 내부 공백 제거 + 유니코드 정규화 ('장 성빈' = '장성빈')
+// 이름 매칭 키 — 내부 공백 제거 + 유니코드 정규화 ('홍 길동' = '홍길동')
 function nameKey(n) { return String(n ?? "").normalize("NFC").replace(/\s+/g, ""); }
 
 const VALID_ROUNDS = new Set(MISSIONS.map(m => m.round));
