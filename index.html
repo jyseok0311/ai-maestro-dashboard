@@ -383,6 +383,25 @@ section { margin-top: 34px; }
 .mcard.is-cur { outline: 2px solid color-mix(in srgb, var(--brand) 55%, transparent); outline-offset: -1px; }
 .mcard.is-fut { opacity: .62; }
 
+/* 보안 서약 확인 */
+.pledge { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 16px; }
+.pledge .meter { margin-top: 8px; }
+.pledge .acts { display: flex; gap: 8px; flex: none; }
+.pledge .done-list { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pledge .pill {
+  font-size: var(--fs-xs); padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  background: var(--surface-2); color: var(--muted);
+}
+.pledge .pill.ok {
+  background: color-mix(in srgb, var(--good) 15%, var(--surface-2));
+  color: var(--good); font-weight: 650;
+}
+:root[data-theme="dark"] .pledge .pill.ok { color: #7fd47f; }
+@media (max-width: 700px) {
+  .pledge { grid-template-columns: 1fr; }
+  .pledge .acts .lbtn, .pledge .acts .cta { flex: 1; }
+}
+
 /* 교육 다시보기 — 카드가 아니라 리스트.
    미션 카드 8개와 같은 모양이 연달아 나오면 화면에 리듬이 없어지고,
    교육 자료는 '읽는 것'이 아니라 '찾아가는 것'이라 한 줄이 더 맞습니다. */
@@ -683,6 +702,15 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
     <div class="card edu-list" id="edu"></div>
   </section>
 
+  <!-- ③-3 보안 서약 확인 -->
+  <section>
+    <div class="sec-head">
+      <h2>보안 서약 확인</h2>
+      <p>서약서를 읽고 확인해 주세요 · 종이 서약서는 별도 제출</p>
+    </div>
+    <div class="card" id="pledgeBox"></div>
+  </section>
+
   <!-- ④ 이탈 위험 -->
   <section>
     <div class="sec-head">
@@ -749,6 +777,10 @@ const CONFIG = {
   SHOWCASE_DATE   : "2026-10-30",
   // 미션 제출 폼 — 상단 '미션 제출하기' 버튼과 진행 중 미션 카드에서 열립니다
   FORM_URL        : "https://docs.google.com/forms/d/e/1FAIpQLSd4-eKMEydQ9bD5iMDOi5x0wbGgJTg3-Jr-Zu0cFBF--r3vng/viewform",
+  // 보안 서약 — 서약서 PDF와 '읽고 확인' 폼, 확인 현황을 담은 응답 탭
+  PLEDGE_PDF      : "AI-자율스터디-보안-서약서.pdf",
+  PLEDGE_FORM     : "https://docs.google.com/forms/d/e/1FAIpQLSfk6IJ9XT0Eyc2BFT-WO5L3GEUgPMk6IgBz7oQVlwJjaGA6IQ/viewform",
+  PLEDGE_CSV      : "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&gid=836603119",
   IMMINENT_DAYS   : 3     // 마감 N일 이내면 '임박'
 };
 
@@ -991,7 +1023,7 @@ function csvToObjects(text) {
    5. 상태
    ============================================================ */
 const STATE = {
-  participants: [], submissions: [],
+  participants: [], submissions: [], pledges: [],
   today: null, lastFetch: null,
   hideNames: false,                 // 공개 화면용 이름 마스킹 (미리보기 모드에서는 강제 적용)
   filters: { dept: "", sort: "no", name: "", riskOnly: false },
@@ -1131,7 +1163,7 @@ function render() {
   const D = computeAll();
   renderMode(D);
   renderTop(D); renderKPI(D); renderHeatmap(D); renderTable(D);
-  renderMissions(D); renderEdu(); renderRisk(D); renderLeaderboard(D);
+  renderMissions(D); renderEdu(); renderPledge(D); renderRisk(D); renderLeaderboard(D);
   document.querySelectorAll("[data-sample]").forEach(t => t.hidden = (MODE !== "preview"));
   $("#footUpdated").textContent =
     MODE === "preview" ? "샘플(가상) 활동 데이터 · 시뮬레이션 시점 " + fmtFull(STATE.today)
@@ -1191,6 +1223,40 @@ function renderEdu() {
     box.appendChild(r);
   });
   eduDrawn = true;
+}
+
+/* 보안 서약 확인 현황 —
+   누가 확인했는지는 마스킹된 이름으로만 보여주고, 미확인자는 수를 강조해 독려합니다. */
+function renderPledge(D) {
+  const box = $("#pledgeBox");
+  const doneKeys = new Set((STATE.pledges || []).map(x => nameKey(x.name)));
+  const rows = D.rows;
+  const done = rows.filter(r => doneKeys.has(nameKey(r.name)));
+  const rate = pct(done.length, rows.length || 1);
+  const pdf = CONFIG.PLEDGE_PDF
+    ? `<a class="lbtn" href="${esc(CONFIG.PLEDGE_PDF)}" target="_blank" rel="noopener noreferrer">
+         <span aria-hidden="true">📄</span> 서약서 보기</a>` : "";
+  const form = CONFIG.PLEDGE_FORM
+    ? `<a class="cta" href="${esc(CONFIG.PLEDGE_FORM)}" target="_blank" rel="noopener noreferrer">
+         <span class="i" aria-hidden="true">✓</span> 읽고 확인하기</a>` : "";
+  box.innerHTML = `
+    <div class="pledge">
+      <div>
+        <div class="stat"><b style="font-size:22px">${done.length}</b>
+          <span> / ${rows.length}명 확인 (${rate}%)</span></div>
+        <div class="meter"><i style="width:${rate}%"></i></div>
+        <div class="out" style="margin-top:8px">
+          ${done.length === rows.length
+            ? "전원 확인을 마쳤습니다."
+            : `아직 확인하지 않은 <b>${rows.length - done.length}명</b>은 서약서를 읽고 확인해 주세요.`}
+        </div>
+      </div>
+      <div class="acts">${pdf}${form}</div>
+      ${done.length ? `<div class="done-list">${
+        rows.map(r => `<span class="pill${doneKeys.has(nameKey(r.name)) ? " ok" : ""}">${
+          doneKeys.has(nameKey(r.name)) ? "✓ " : ""}${esc(displayName(r))}</span>`).join("")
+      }</div>` : ""}
+    </div>`;
 }
 
 // 현재 모드를 알리는 배너
@@ -1676,6 +1742,19 @@ async function loadReal() {
   STATE.dataIssues = issues;
   STATE.lastFetch = new Date();
   STATE.today = startOfDay(new Date());
+
+  // 보안 서약 확인 현황 — 실패해도 대시보드 본체는 계속 동작해야 하므로 조용히 넘어갑니다
+  if (CONFIG.PLEDGE_CSV) {
+    try {
+      const r = await fetch(CONFIG.PLEDGE_CSV, { cache: "no-store" });
+      const t = await r.text();
+      if (r.ok && !/^\s*</.test(t)) {
+        STATE.pledges = csvToObjects(t)
+          .map(o => ({ name: (o["이름"] || "").trim(), ts: parseFormTimestamp(o["타임스탬프"]) }))
+          .filter(x => x.name);
+      }
+    } catch (_) { /* 서약 현황만 비게 두고 진행 */ }
+  }
 }
 
 /* 모드 전환 — roster(실제: 명단만) ↔ preview(샘플 활동) */
