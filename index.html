@@ -702,8 +702,8 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
     <div class="card edu-list" id="edu"></div>
   </section>
 
-  <!-- ③-3 보안 서약 확인 -->
-  <section>
+  <!-- ③-3 보안 서약 확인 — CONFIG.PLEDGE_ENABLED 로 표시 여부를 제어합니다 -->
+  <section id="pledgeSec" hidden>
     <div class="sec-head">
       <h2>보안 서약 확인</h2>
       <p>서약서를 읽고 확인해 주세요 · 종이 서약서는 별도 제출</p>
@@ -777,7 +777,10 @@ const CONFIG = {
   SHOWCASE_DATE   : "2026-10-30",
   // 미션 제출 폼 — 상단 '미션 제출하기' 버튼과 진행 중 미션 카드에서 열립니다
   FORM_URL        : "https://docs.google.com/forms/d/e/1FAIpQLSd4-eKMEydQ9bD5iMDOi5x0wbGgJTg3-Jr-Zu0cFBF--r3vng/viewform",
-  // 보안 서약 — 서약서 PDF와 '읽고 확인' 폼, 확인 현황을 담은 응답 탭
+  // 보안 서약 — 검토 중이라 현재 숨김 상태입니다.
+  //  ▶ 다시 켜려면 PLEDGE_ENABLED 를 true 로 바꾸고,
+  //    서약서 PDF(AI-자율스터디-보안-서약서.pdf)를 저장소에 다시 올리세요.
+  PLEDGE_ENABLED  : false,
   PLEDGE_PDF      : "AI-자율스터디-보안-서약서.pdf",
   PLEDGE_FORM     : "https://docs.google.com/forms/d/e/1FAIpQLSfk6IJ9XT0Eyc2BFT-WO5L3GEUgPMk6IgBz7oQVlwJjaGA6IQ/viewform",
   PLEDGE_CSV      : "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&gid=836603119",
@@ -1228,6 +1231,9 @@ function renderEdu() {
 /* 보안 서약 확인 현황 —
    누가 확인했는지는 마스킹된 이름으로만 보여주고, 미확인자는 수를 강조해 독려합니다. */
 function renderPledge(D) {
+  const sec = $("#pledgeSec");
+  if (!CONFIG.PLEDGE_ENABLED) { sec.hidden = true; return; }   // 검토 중 — 숨김
+  sec.hidden = false;
   const box = $("#pledgeBox");
   const doneKeys = new Set((STATE.pledges || []).map(x => nameKey(x.name)));
   const rows = D.rows;
@@ -1744,7 +1750,7 @@ async function loadReal() {
   STATE.today = startOfDay(new Date());
 
   // 보안 서약 확인 현황 — 실패해도 대시보드 본체는 계속 동작해야 하므로 조용히 넘어갑니다
-  if (CONFIG.PLEDGE_CSV) {
+  if (CONFIG.PLEDGE_ENABLED && CONFIG.PLEDGE_CSV) {
     try {
       const r = await fetch(CONFIG.PLEDGE_CSV, { cache: "no-store" });
       const t = await r.text();
