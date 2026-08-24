@@ -697,7 +697,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   <section>
     <div class="sec-head">
       <h2>AI 교육 다시보기</h2>
-      <p>총 8회 · 영상과 자료(Padlet)를 다시 볼 수 있습니다</p>
+      <p>총 8회 + 성과공유회 · 영상과 자료(Padlet)를 다시 볼 수 있습니다</p>
     </div>
     <div class="card edu-list" id="edu"></div>
   </section>
@@ -863,7 +863,12 @@ const EDU = [
     video: "https://youtu.be/jAqBBOr1ZiI", doc: "https://zrr.kr/1IhQB5" },
   { n: 8, date: "2026-08-21", title: "AI 에이전트 완성", rel: 8,
     desc: "프로토타입 고도화·예외 처리, 실 업무 데이터 테스트, 성과공유회 발표 준비 및 전체 시연",
-    video: "https://youtu.be/Ct778JJbT40", doc: "https://zrr.kr/FgKyid" }
+    video: "https://youtu.be/Ct778JJbT40", doc: "https://zrr.kr/FgKyid" },
+  // 회차 교육이 아니라 교육과정 마무리 행사입니다. 숫자 배지 대신 label 로 표기하고,
+  // 배포 자료가 없으므로 doc: null 로 두어 '자료' 버튼 자체를 숨깁니다.
+  { n: 9, label: "마무리", date: "2026-08-21", title: "AI 교육 성과공유회", rel: null,
+    desc: "수강생 전체 시연 및 피드백 — AI 교육 8회차 과정을 마무리하는 성과공유회",
+    video: "https://youtu.be/xtO6tYstk1U", doc: null }
 ];
 
 /* ============================================================
@@ -1208,7 +1213,7 @@ function renderEdu() {
     const d = parseDate(e.date);
     const wd = ["일","월","화","수","목","금","토"][d.getDay()];
     r.innerHTML = `
-      <div class="n">${e.n}차</div>
+      <div class="n">${e.label ? esc(e.label) : e.n + "차"}</div>
       <div class="body">
         <div class="ttl">${esc(e.title)}</div>
         <div class="meta">${fmtMD(d)}(${wd})${e.rel ? " · 미션 " + e.rel + " 관련" : ""}<span class="desc-part"> · ${esc(e.desc)}</span></div>
@@ -1218,7 +1223,8 @@ function renderEdu() {
           ? `<a class="lbtn play" href="${esc(e.video)}" target="_blank" rel="noopener noreferrer">
                <span class="i" aria-hidden="true">▶</span> 영상</a>`
           : `<span class="lbtn play" aria-disabled="true"><span class="i" aria-hidden="true">▶</span> 예정</span>`}
-        ${e.doc
+        ${e.doc === null ? ""                                  // 배포 자료가 없는 항목
+          : e.doc
           ? `<a class="lbtn" href="${esc(e.doc)}" target="_blank" rel="noopener noreferrer">
                <span aria-hidden="true">📄</span> 자료</a>`
           : `<span class="lbtn" aria-disabled="true"><span aria-hidden="true">📄</span> 준비 중</span>`}
