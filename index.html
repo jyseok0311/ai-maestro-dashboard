@@ -614,6 +614,8 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
       </div>
     </div>
     <div class="chips" id="topChips"></div>
+    <a class="navlink" id="surveyLink" target="_blank" rel="noopener noreferrer"
+       title="AI 교육 만족도 조사 (학교 구글 계정 로그인 필요)">📝 만족도 조사</a>
     <a class="navlink" href="how-it-works.html"
        title="이 대시보드가 어떻게 동작하는지 한 장으로 보기">동작 방식 ↗</a>
     <a class="cta" id="submitCta" target="_blank" rel="noopener noreferrer"
@@ -777,6 +779,8 @@ const CONFIG = {
   SHOWCASE_DATE   : "2026-10-30",
   // 미션 제출 폼 — 상단 '미션 제출하기' 버튼과 진행 중 미션 카드에서 열립니다
   FORM_URL        : "https://docs.google.com/forms/d/e/1FAIpQLSd4-eKMEydQ9bD5iMDOi5x0wbGgJTg3-Jr-Zu0cFBF--r3vng/viewform",
+  // AI 교육 만족도 조사 (Apps Script 웹앱) — 비우면 상단 메뉴에서 사라집니다
+  SURVEY_URL      : "https://script.google.com/a/macros/pusan.ac.kr/s/AKfycbyvuMjDY_RHMjjuDqHRL7ARmZNEJutKLH44IbRdtBmRHox4a1RqBGJAHKrS_Y7OgGX2/exec",
   // 보안 서약 — 검토 중이라 현재 숨김 상태입니다.
   //  ▶ 다시 켜려면 PLEDGE_ENABLED 를 true 로 바꾸고,
   //    서약서 PDF(AI-자율스터디-보안-서약서.pdf)를 저장소에 다시 올리세요.
@@ -1865,6 +1869,10 @@ async function init() {
   // 제출 폼 링크 연결 — URL이 비어 있으면 버튼을 숨겨 죽은 링크를 노출하지 않습니다
   const cta = $("#submitCta");
   if (CONFIG.FORM_URL) cta.href = CONFIG.FORM_URL; else cta.remove();
+
+  // 만족도 조사 링크도 같은 방식으로 (조사 종료 후 URL만 비우면 메뉴가 사라집니다)
+  const sv = $("#surveyLink");
+  if (CONFIG.SURVEY_URL) sv.href = CONFIG.SURVEY_URL; else sv.remove();
 
   // 공개 배포에서는 이름 마스킹을 항상 켠 채로 잠급니다
   if (FORCE_MASK) {
