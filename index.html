@@ -780,7 +780,9 @@ const CONFIG = {
   // 미션 제출 폼 — 상단 '미션 제출하기' 버튼과 진행 중 미션 카드에서 열립니다
   FORM_URL        : "https://docs.google.com/forms/d/e/1FAIpQLSd4-eKMEydQ9bD5iMDOi5x0wbGgJTg3-Jr-Zu0cFBF--r3vng/viewform",
   // AI 교육 만족도 조사 (Apps Script 웹앱) — 비우면 상단 메뉴에서 사라집니다
-  SURVEY_URL      : "https://script.google.com/a/macros/pusan.ac.kr/s/AKfycbyvuMjDY_RHMjjuDqHRL7ARmZNEJutKLH44IbRdtBmRHox4a1RqBGJAHKrS_Y7OgGX2/exec",
+  //  ※ '/a/macros/pusan.ac.kr/' 형태는 학교 SSO를 강제로 거치다 리다이렉트 루프
+  //    (ERR_TOO_MANY_REDIRECTS)가 나므로, 도메인 없는 일반 형태를 씁니다.
+  SURVEY_URL      : "https://script.google.com/macros/s/AKfycbyvuMjDY_RHMjjuDqHRL7ARmZNEJutKLH44IbRdtBmRHox4a1RqBGJAHKrS_Y7OgGX2/exec",
   // 보안 서약 — 검토 중이라 현재 숨김 상태입니다.
   //  ▶ 다시 켜려면 PLEDGE_ENABLED 를 true 로 바꾸고,
   //    서약서 PDF(AI-자율스터디-보안-서약서.pdf)를 저장소에 다시 올리세요.
