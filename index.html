@@ -772,7 +772,12 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
    ============================================================ */
 const CONFIG = {
   PARTICIPANTS_CSV: "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&gid=0",           // 명단 탭
-  SUBMISSIONS_CSV : "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&gid=850321703",   // 제출 탭
+  // 폼 원본 응답 탭을 직접 읽습니다.
+  //  이전에는 Apps Script 트리거가 [제출] 탭(gid=850321703)으로 옮긴 값을 읽었는데,
+  //  트리거가 동작하지 않으면 폼 제출이 대시보드에 전혀 반영되지 않는 문제가 있었습니다.
+  //  대시보드가 헤더 별칭(Timestamp→타임스탬프)·회차 라벨·이름 정규화를 모두 처리하므로
+  //  원본을 직접 읽어 트리거 의존을 없앴습니다.
+  SUBMISSIONS_CSV : "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&gid=2145842306",  // 폼 응답 원본
   REFRESH_MS      : 60000,
   PEER_TARGET     : 79,   // 성과공유회 기준 부서 참여 인원 목표
   START_DATE      : "2026-08-24",
