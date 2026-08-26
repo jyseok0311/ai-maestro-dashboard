@@ -1093,9 +1093,10 @@ function computeAll() {
   const passedCount = missions.filter(m => m.phase === "past").length;   // 마감이 지난 회차 수
   const current = missions.find(m => m.phase === "current") || null;
 
-  // 이름 → 회차 → 제출
-  // 이름은 정규화 키로 매칭하고('홍 길동' = '홍길동'), 같은 회차 중복 제출은
-  // 시트 행 순서가 아니라 '가장 이른 타임스탬프'를 채택합니다.
+  /* 이름 → 회차 → 제출
+     · 이름은 정규화 키로 매칭합니다 ('홍 길동' = '홍길동')
+     · 같은 회차를 여러 번 제출하면 가장 나중 타임스탬프를 채택합니다(최종 제출 인정).
+       재제출은 대개 수정본이므로, 시트 행 순서가 아니라 제출 시각으로 판단합니다. */
   const byName = new Map();
   const rosterKeys = new Set(STATE.participants.map(p => nameKey(p.name)));
   const unmatched = new Map();                     // 명단에 없는 이름으로 들어온 제출
@@ -1109,8 +1110,8 @@ function computeAll() {
     if (!byName.has(key)) byName.set(key, new Map());
     const mp = byName.get(key);
     const prev = mp.get(s.round);
-    // 타임스탬프가 없는 건은 기존 건을 밀어내지 않음
-    if (!prev || (s.ts && prev.ts && s.ts < prev.ts) || (s.ts && !prev.ts)) mp.set(s.round, s);
+    // 시각을 해석하지 못한 건은 시각이 있는 건을 밀어내지 않습니다
+    if (!prev || (s.ts && prev.ts && s.ts > prev.ts) || (s.ts && !prev.ts)) mp.set(s.round, s);
   });
 
   const rows = STATE.participants.map(p => {
