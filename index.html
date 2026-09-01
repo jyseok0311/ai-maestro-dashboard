@@ -180,6 +180,11 @@ header.topbar {
 .navlink:hover { background: var(--surface-2); color: var(--ink); }
 .navlink:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
+/* 마감이 지난 회차의 제출 버튼 — 진행 중 회차보다 한 단계 낮은 위계 */
+.mcard .lbtn.late {
+  width: 100%; justify-content: center; margin-top: 10px; min-height: 36px;
+}
+
 /* 미션 제출 버튼 — 대시보드의 주 행동(primary CTA).
    상단바가 sticky라 스크롤해도 항상 손에 닿습니다. */
 .cta {
@@ -1501,9 +1506,15 @@ function renderMissions(D) {
         <summary style="font-size:12px;color:var(--muted);cursor:pointer">수행 지침</summary>
         <p class="out" style="margin:6px 0 0">${esc(m.desc)}</p>
       </details>
-      ${(m.phase === "current" && CONFIG.FORM_URL)
-        ? `<a class="cta" href="${esc(CONFIG.FORM_URL)}" target="_blank" rel="noopener noreferrer">
-             <span class="i" aria-hidden="true">✎</span> ${m.round}회차 제출하기</a>`
+      ${(m.phase !== "future" && CONFIG.FORM_URL)
+        ? (m.phase === "current"
+            // 진행 중 회차 — 기본(채움) 버튼으로 가장 눈에 띄게
+            ? `<a class="cta" href="${esc(CONFIG.FORM_URL)}" target="_blank" rel="noopener noreferrer">
+                 <span class="i" aria-hidden="true">✎</span> ${m.round}회차 제출하기</a>`
+            // 마감이 지난 회차 — 늦게라도 제출할 수 있게 계속 열어 둡니다.
+            // 진행 중 회차와 구분되도록 보조(테두리) 버튼으로 표시합니다.
+            : `<a class="lbtn late" href="${esc(CONFIG.FORM_URL)}" target="_blank" rel="noopener noreferrer">
+                 <span aria-hidden="true">✎</span> ${m.round}회차 지금이라도 제출</a>`)
         : ""}`;
     box.appendChild(c);
   });
