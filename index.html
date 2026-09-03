@@ -233,6 +233,45 @@ header.topbar {
   display: flex; gap: 10px; align-items: flex-start;
 }
 .info-banner .ic { flex: none; color: var(--brand); }
+
+/* ---------- 언론 보도 배너 ----------
+   "내가 만든 것이 밖에서도 다뤄진다"를 확인시켜 주는 자리입니다.
+   모드 안내 배너와 같은 위치·같은 브랜드 톤을 쓰되, 카드 전체를 링크로 만들어
+   읽고 바로 누를 수 있게 했습니다. (버튼을 따로 두면 클릭 영역이 좁아집니다) */
+.press {
+  margin: 18px 0 0; padding: 13px 15px; border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--brand) 32%, var(--border));
+  background: color-mix(in srgb, var(--brand) 7%, var(--surface));
+  color: var(--ink); text-decoration: none;
+  display: flex; align-items: center; gap: 13px;
+  transition: background .15s, border-color .15s;
+}
+.press:hover, .press:focus-visible {
+  background: color-mix(in srgb, var(--brand) 13%, var(--surface));
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--border));
+}
+.press .tag {
+  flex: none; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px;
+  border-radius: 999px; background: var(--brand); color: var(--cta-ink);
+  font-size: var(--fs-xs); font-weight: 700; white-space: nowrap;
+}
+.press .body { flex: 1; min-width: 0; }
+.press .hl, .press .meta { display: block; }
+.press .hl {
+  font-size: var(--fs-md); font-weight: 700; letter-spacing: -0.01em;
+  color: var(--brand-ink); line-height: 1.35;
+}
+.press .meta { font-size: var(--fs-sm); color: var(--ink-2); margin-top: 3px; }
+.press .go { flex: none; font-size: var(--fs-sm); font-weight: 700; color: var(--brand); white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .press { flex-wrap: wrap; gap: 9px 12px; }
+  .press .body { flex-basis: 100%; order: 3; }
+  .press .go   { order: 2; margin-left: auto; }
+  /* 좁은 화면에서는 헤드라인만 남기고 해설은 접습니다 */
+  .press .note { display: none; }
+}
 .banner-btn {
   margin-left: auto; flex: none; align-self: center;
   font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
@@ -635,6 +674,11 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   <!-- 모드 안내 배너 — JS가 현재 모드(roster / preview / real)에 맞춰 채웁니다 -->
   <div id="modeBox" role="status" aria-live="polite"></div>
 
+  <!-- ⓪ 언론 보도 — PRESS 배열이 비어 있으면 JS가 섹션째 숨깁니다 -->
+  <section id="pressSec" hidden>
+    <a class="press" id="pressLink" target="_blank" rel="noopener noreferrer"></a>
+  </section>
+
   <div class="simbar" id="simbar" hidden>
     <label for="simRange">시점 시뮬레이션</label>
     <input type="range" id="simRange" min="0" max="67" value="42">
@@ -855,6 +899,21 @@ const SHOWCASE = {
    자율 스터디 미션은 교육 내용을 복습·적용하는 활동이므로,
    각 회차에 관련 미션 번호(rel)를 연결해 바로 찾아갈 수 있게 합니다.
    ============================================================ */
+/* ============================================================
+   2-3. 언론 보도
+   자율 스터디는 8주짜리 장거리 활동이라 중간에 동력이 떨어지기 쉽습니다.
+   "우리가 한 일이 밖에서도 다뤄진다"는 사실이 가장 확실한 연료라
+   대시보드 최상단(모드 배너 자리)에 최신 1건을 띄웁니다.
+   기사가 늘어나면 배열 맨 앞에 추가하세요. 배너는 PRESS[0] 만 씁니다.
+   ============================================================ */
+const PRESS = [
+  { date: "2026-09-03", outlet: "부산일보",
+    title: "부산대, 실무자가 만든 'AI 에이전트'로 행정 AX 확산",
+    note: "「AI 마에스트로」 교육에서 여러분이 만든 AI 에이전트 12개가 소개되었습니다. "
+        + "기사가 말하는 전 부서 확산이 바로 지금 하고 계신 자율 스터디입니다.",
+    url: "https://www.busan.com/view/busan/view.php?code=2026090314112969824" }
+];
+
 const EDU = [
   { n: 1, date: "2026-06-19", title: "AI 기초, 문서 작성", rel: 1,
     desc: "프롬프트·컨텍스트 엔지니어링, LLM 문서 자동화(워드·PPT), 심층 리서치, 나만의 Skill 만들기",
@@ -1188,7 +1247,7 @@ function render() {
   const D = computeAll();
   renderMode(D);
   renderTop(D); renderKPI(D); renderHeatmap(D); renderTable(D);
-  renderMissions(D); renderEdu(); renderPledge(D); renderRisk(D); renderLeaderboard(D);
+  renderMissions(D); renderEdu(); renderPress(); renderPledge(D); renderRisk(D); renderLeaderboard(D);
   document.querySelectorAll("[data-sample]").forEach(t => t.hidden = (MODE !== "preview"));
   $("#footUpdated").textContent =
     MODE === "preview" ? "샘플(가상) 활동 데이터 · 시뮬레이션 시점 " + fmtFull(STATE.today)
@@ -1220,6 +1279,27 @@ function dataWarnHTML(D) {
 /* 교육 다시보기 — 회차별 영상·자료 링크
    미션과 달리 제출 데이터와 무관한 정적 목록이라 한 번만 그립니다. */
 let eduDrawn = false;
+/* 언론 보도 배너 — 가장 최근 기사 1건.
+   제목·매체·날짜만 싣고 본문은 옮기지 않습니다(저작권). 원문은 링크로 갑니다. */
+function renderPress() {
+  const sec = $("#pressSec");
+  if (!PRESS.length) { sec.hidden = true; return; }
+  const p = PRESS[0];
+  const d = parseDate(p.date);
+  const a = $("#pressLink");
+  a.href = p.url;
+  a.title = p.outlet + " 기사 원문이 새 창에서 열립니다";
+  a.innerHTML = `
+    <span class="tag"><span aria-hidden="true">📰</span> 언론 보도</span>
+    <span class="body">
+      <span class="hl">${esc(p.title)}</span>
+      <span class="meta">${esc(p.outlet)} · ${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.${
+        p.note ? `<span class="note"> · ${esc(p.note)}</span>` : ""}</span>
+    </span>
+    <span class="go">기사 보기 ↗</span>`;
+  sec.hidden = false;
+}
+
 function renderEdu() {
   if (eduDrawn) return;
   const box = $("#edu");
