@@ -123,8 +123,11 @@ header.topbar {
 }
 .topbar-in {
   max-width: 1240px; margin: 0 auto; padding: 12px 20px;
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
 }
+/* 간격이 16px 이던 시절엔 항목 폭 합이 1220px 로 가용폭(1200px)을 20px 넘겨
+   최대 폭에서도 상단바가 두 줄이 됐습니다. 11px 로 조여 한 줄에 담습니다.
+   상단바는 sticky 라 한 줄(54px)과 두 줄(116px)의 차이가 그대로 화면 손실입니다. */
 .brandmark {
   display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0;
 }
@@ -137,6 +140,12 @@ header.topbar {
 .brandmark p  { font-size: var(--fs-xs); margin: 0; color: var(--muted); }
 
 .chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* 제출 버튼 + 테마 버튼 묶음.
+   상단바 항목이 늘면서 테마 아이콘만 혼자 다음 줄로 떨어지는 구간(940~960px)이
+   생겨, 둘을 한 덩어리로 만들어 항상 함께 움직이게 했습니다.
+   조작부 전체를 묶으면 줄바꿈이 거칠어져 넓은 화면에서 오히려 한 줄이 늘어납니다. */
+.cta-group { display: flex; align-items: center; gap: 10px; flex: none; }
 /* 상단바는 두 계열로만 구성합니다.
    ① 칩  = 읽는 것(비대화형) — 테두리 없는 알약, 배경만 은은하게
    ② 버튼 = 누르는 것        — 테두리/채움이 있는 사각(반경 9px), 높이 36px 통일
@@ -232,6 +241,7 @@ header.topbar {
   .brandmark p { display: none; }
   /* 컨트롤이 한 줄 늘어나므로 여백을 조여 sticky 높이를 억제합니다 */
   .topbar-in { padding: 9px 16px; gap: 9px; }
+  .cta-group { gap: 9px; }
   .chips { gap: 6px; }
 }
 
@@ -679,16 +689,21 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
       </div>
     </div>
     <div class="chips" id="topChips"></div>
+
     <a class="navlink accent" id="asLink" target="_blank" rel="noopener noreferrer"
        title="담당자가 부서로 찾아가 1:1로 도와드립니다 · 로그인 없이 신청할 수 있습니다">🛠 찾아가는 AX-A/S 신청</a>
     <a class="navlink" id="surveyLink" target="_blank" rel="noopener noreferrer"
        title="AI 교육 만족도 조사 현황 보기 (학교 구글 계정 로그인 필요)">📝 교육 만족도 조사 현황</a>
     <a class="navlink" href="how-it-works.html"
        title="이 대시보드가 어떻게 동작하는지 한 장으로 보기">동작 방식 ↗</a>
-    <a class="cta" id="submitCta" target="_blank" rel="noopener noreferrer"
-       title="구글 폼이 새 창에서 열립니다 (학교 구글 계정 로그인 필요)">
-       <span class="i" aria-hidden="true">✎</span> 미션 제출하기</a>
-    <button class="iconbtn" id="themeBtn" title="라이트/다크 전환" aria-label="라이트/다크 전환">◐</button>
+    <!-- 제출 버튼과 테마 버튼은 한 덩어리로 둡니다. 따로 두면 940~960px 구간에서
+         테마 아이콘만 혼자 다음 줄로 떨어져 상단바가 통째로 한 줄 높아졌습니다. -->
+    <span class="cta-group">
+      <a class="cta" id="submitCta" target="_blank" rel="noopener noreferrer"
+         title="구글 폼이 새 창에서 열립니다 (학교 구글 계정 로그인 필요)">
+         <span class="i" aria-hidden="true">✎</span> 미션 제출하기</a>
+      <button class="iconbtn" id="themeBtn" title="라이트/다크 전환" aria-label="라이트/다크 전환">◐</button>
+    </span>
   </div>
 </header>
 
