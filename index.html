@@ -180,6 +180,18 @@ header.topbar {
 .navlink:hover { background: var(--surface-2); color: var(--ink); }
 .navlink:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
+/* 찾아가는 A/S 신청 — 지금 눌러야 할 사람이 따로 있는 메뉴라
+   다른 메뉴보다 한 단계 위, 미션 제출 CTA 보다는 한 단계 아래로 둡니다. */
+.navlink.accent {
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--border));
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+  color: var(--brand-ink); font-weight: 700;
+}
+.navlink.accent:hover {
+  background: color-mix(in srgb, var(--brand) 15%, var(--surface));
+  color: var(--brand-ink);
+}
+
 /* 마감이 지난 회차의 제출 버튼 — 진행 중 회차보다 한 단계 낮은 위계 */
 .mcard .lbtn.late {
   width: 100%; justify-content: center; margin-top: 10px; min-height: 36px;
@@ -658,6 +670,8 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
       </div>
     </div>
     <div class="chips" id="topChips"></div>
+    <a class="navlink accent" id="asLink" target="_blank" rel="noopener noreferrer"
+       title="담당자가 부서로 찾아가 1:1로 도와드립니다 (학교 구글 계정 로그인 필요)">🛠 찾아가는 A/S 신청</a>
     <a class="navlink" id="surveyLink" target="_blank" rel="noopener noreferrer"
        title="AI 교육 만족도 조사 현황 보기 (학교 구글 계정 로그인 필요)">📝 교육 만족도 조사 현황</a>
     <a class="navlink" href="how-it-works.html"
@@ -837,6 +851,9 @@ const CONFIG = {
   //  ※ '/a/macros/pusan.ac.kr/' 형태는 학교 SSO를 강제로 거치다 리다이렉트 루프
   //    (ERR_TOO_MANY_REDIRECTS)가 나므로, 도메인 없는 일반 형태를 씁니다.
   SURVEY_URL      : "https://script.google.com/macros/s/AKfycbyvuMjDY_RHMjjuDqHRL7ARmZNEJutKLH44IbRdtBmRHox4a1RqBGJAHKrS_Y7OgGX2/exec",
+  // 찾아가는 AX-A/S 신청 폼 — AS신청_setup.gs 를 실행하면 로그에 URL 이 찍힙니다.
+  // 비워 두면 상단 메뉴에 나타나지 않습니다(폼을 만들기 전 상태).
+  AS_FORM_URL     : "",
   // 보안 서약 — 검토 중이라 현재 숨김 상태입니다.
   //  ▶ 다시 켜려면 PLEDGE_ENABLED 를 true 로 바꾸고,
   //    서약서 PDF(AI-자율스터디-보안-서약서.pdf)를 저장소에 다시 올리세요.
@@ -1972,6 +1989,10 @@ async function init() {
   // 만족도 조사 링크도 같은 방식으로 (조사 종료 후 URL만 비우면 메뉴가 사라집니다)
   const sv = $("#surveyLink");
   if (CONFIG.SURVEY_URL) sv.href = CONFIG.SURVEY_URL; else sv.remove();
+
+  // 찾아가는 A/S 신청 — 폼 주소가 설정되기 전에는 메뉴를 아예 없앱니다
+  const as = $("#asLink");
+  if (CONFIG.AS_FORM_URL) as.href = CONFIG.AS_FORM_URL; else as.remove();
 
   // 공개 배포에서는 이름 마스킹을 항상 켠 채로 잠급니다
   if (FORCE_MASK) {
