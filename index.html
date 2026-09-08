@@ -267,20 +267,17 @@ header.topbar {
 
 /* ---------- 언론 보도 배너 ----------
    "내가 만든 것이 밖에서도 다뤄진다"를 확인시켜 주는 자리입니다.
-   모드 안내 배너와 같은 위치·같은 브랜드 톤을 쓰되, 카드 전체를 링크로 만들어
-   읽고 바로 누를 수 있게 했습니다. (버튼을 따로 두면 클릭 영역이 좁아집니다) */
+   모드 안내 배너와 같은 위치·같은 브랜드 톤을 씁니다.
+   매체가 여러 곳이라 카드 전체를 링크로 두지 않고(중첩 링크는 쓸 수 없습니다),
+   대표 제목과 매체 버튼을 각각 링크로 두었습니다. */
 .press {
   margin: 18px 0 0; padding: 13px 15px; border-radius: var(--radius);
   border: 1px solid color-mix(in srgb, var(--brand) 32%, var(--border));
   background: color-mix(in srgb, var(--brand) 7%, var(--surface));
-  color: var(--ink); text-decoration: none;
-  display: flex; align-items: center; gap: 13px;
-  transition: background .15s, border-color .15s;
+  color: var(--ink);
+  display: flex; align-items: flex-start; gap: 13px;
 }
-.press:hover, .press:focus-visible {
-  background: color-mix(in srgb, var(--brand) 13%, var(--surface));
-  border-color: color-mix(in srgb, var(--brand) 55%, var(--border));
-}
+.press .hl:hover { text-decoration: underline; }
 .press .tag {
   flex: none; align-self: flex-start;
   display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px;
@@ -291,16 +288,27 @@ header.topbar {
 .press .hl, .press .meta { display: block; }
 .press .hl {
   font-size: var(--fs-md); font-weight: 700; letter-spacing: -0.01em;
-  color: var(--brand-ink); line-height: 1.35;
+  color: var(--brand-ink); line-height: 1.35; text-decoration: none;
 }
 .press .meta { font-size: var(--fs-sm); color: var(--ink-2); margin-top: 3px; }
-.press .go { flex: none; font-size: var(--fs-sm); font-weight: 700; color: var(--brand); white-space: nowrap; }
+
+/* 매체 버튼 — 누르는 것이므로 알약이 아니라 사각(반경 7px)으로 둡니다.
+   상단바의 "칩 = 읽는 것 / 버튼 = 누르는 것" 규칙을 그대로 따릅니다. */
+.press .outlets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.press .outlets a {
+  display: inline-flex; align-items: center; height: 27px; padding: 0 10px;
+  border-radius: 7px; font-size: var(--fs-xs); font-weight: 650;
+  text-decoration: none; white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--border));
+  background: var(--surface); color: var(--brand-ink);
+}
+.press .outlets a:hover { background: color-mix(in srgb, var(--brand) 12%, var(--surface)); }
+.press .outlets a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 @media (max-width: 720px) {
   .press { flex-wrap: wrap; gap: 9px 12px; }
-  .press .body { flex-basis: 100%; order: 3; }
-  .press .go   { order: 2; margin-left: auto; }
-  /* 좁은 화면에서는 헤드라인만 남기고 해설은 접습니다 */
+  .press .body { flex-basis: 100%; }
+  /* 좁은 화면에서는 헤드라인과 매체 버튼만 남기고 해설은 접습니다 */
   .press .note { display: none; }
 }
 .banner-btn {
@@ -714,7 +722,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
 
   <!-- ⓪ 언론 보도 — PRESS 배열이 비어 있으면 JS가 섹션째 숨깁니다 -->
   <section id="pressSec" hidden>
-    <a class="press" id="pressLink" target="_blank" rel="noopener noreferrer"></a>
+    <div class="press" id="pressBox"></div>
   </section>
 
   <div class="simbar" id="simbar" hidden>
@@ -951,10 +959,25 @@ const SHOWCASE = {
 const PRESS = [
   { date: "2026-09-03", outlet: "부산일보",
     title: "부산대, 실무자가 만든 'AI 에이전트'로 행정 AX 확산",
-    note: "「AI 마에스트로」 교육에서 여러분이 만든 AI 에이전트 12개가 소개되었습니다. "
-        + "기사가 말하는 전 부서 확산이 바로 지금 하고 계신 자율 스터디입니다.",
-    url: "https://www.busan.com/view/busan/view.php?code=2026090314112969824" }
+    url: "https://www.busan.com/view/busan/view.php?code=2026090314112969824" },
+  { date: "2026-09-03", outlet: "국제신문",
+    title: "부산대, 실무자가 만든 'AI 에이전트'로 행정 AX 확산",
+    url: "https://www.kookje.co.kr/news2011/asp/newsbody.asp?code=0300&key=20260903.99099001033" },
+  { date: "2026-09-03", outlet: "아시아경제",
+    title: "AI가 업무를 바꾼다… 부산대 직원들 직접 만든 'AI 에이전트'",
+    url: "https://view.asiae.co.kr/article/2026090310294345415" },
+  { date: "2026-09-03", outlet: "인더뉴스",
+    title: "부산대, 20개 부서 실무자 AI 에이전트 개발…상향식 AX 확산",
+    url: "https://www.inthenews.co.kr/news/article.html?no=91342" },
+  { date: "2026-09-03", outlet: "이뉴스투데이",
+    title: "부산대 행정직원이 직접 'AI 직원' 만든다…대학 행정 AX 혁신 속도",
+    url: "https://www.enewstoday.co.kr/news/articleView.html?idxno=2466670" }
 ];
+
+// 매체마다 제목이 조금씩 달라 배너에는 대표 제목 하나만 걸고,
+// 나머지는 아래 매체 버튼으로 각자 원문에 바로 가게 했습니다.
+const PRESS_NOTE = "「AI 마에스트로」 교육에서 여러분이 만든 AI 에이전트 12개가 소개되었습니다. "
+                 + "기사가 말하는 전 부서 확산이 바로 지금 하고 계신 자율 스터디입니다.";
 
 const EDU = [
   { n: 1, date: "2026-06-19", title: "AI 기초, 문서 작성", rel: 1,
@@ -1326,19 +1349,19 @@ let eduDrawn = false;
 function renderPress() {
   const sec = $("#pressSec");
   if (!PRESS.length) { sec.hidden = true; return; }
-  const p = PRESS[0];
+  const p = PRESS[0];                       // 대표 기사 — 배열 맨 앞
   const d = parseDate(p.date);
-  const a = $("#pressLink");
-  a.href = p.url;
-  a.title = p.outlet + " 기사 원문이 새 창에서 열립니다";
-  a.innerHTML = `
-    <span class="tag"><span aria-hidden="true">📰</span> 언론 보도</span>
-    <span class="body">
-      <span class="hl">${esc(p.title)}</span>
-      <span class="meta">${esc(p.outlet)} · ${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.${
-        p.note ? `<span class="note"> · ${esc(p.note)}</span>` : ""}</span>
-    </span>
-    <span class="go">기사 보기 ↗</span>`;
+  const link = x => `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer"
+       title="${esc(x.title)}">${esc(x.outlet)} <span aria-hidden="true">↗</span></a>`;
+  $("#pressBox").innerHTML = `
+    <span class="tag"><span aria-hidden="true">📰</span> 언론 보도 ${PRESS.length}건</span>
+    <div class="body">
+      <a class="hl" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer"
+         title="${esc(p.outlet)} 기사 원문이 새 창에서 열립니다">${esc(p.title)} <span aria-hidden="true">↗</span></a>
+      <span class="meta">${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.${
+        PRESS_NOTE ? `<span class="note"> · ${esc(PRESS_NOTE)}</span>` : ""}</span>
+      <div class="outlets">${PRESS.map(link).join("")}</div>
+    </div>`;
   sec.hidden = false;
 }
 
