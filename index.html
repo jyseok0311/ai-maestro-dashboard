@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f3f6fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a111c" media="(prefers-color-scheme: dark)">
 <title>AI 마에스트로 자율 스터디 대시보드</title>
 <!-- Pretendard — 한글 UI용 가변 폰트. 동적 서브셋이라 실제 전송량이 작고,
      CDN이 막히면 아래 font-family 폴백(맑은 고딕 등)으로 자연히 되돌아갑니다. -->
@@ -11,97 +13,122 @@
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* ============================================================
-   디자인 토큰
-   - 색상은 dataviz 가이드의 검증된 팔레트를 사용
-   - 히트맵 내부는 초록/노랑/회색 조합만 사용 (적록색약 안전, CVD ΔE 11.3 PASS)
+   디자인 토큰 — 글레이셜(2026-10-02)
+   - 방향: 차가운 푸른빛 + 본 화이트, 맑고 넓게. 따뜻한 색은 A/S 신청(주황) 하나에만 둡니다
+   - 히트맵은 네이비(완료)/앰버(마감 임박)/회청(미제출) — dataviz 검증기로 계산:
+     라이트 CVD ΔE 18.8(제2색맹)·16.0(제3색맹), 정상 시각 19.4 / 다크 29.9·33.1
+     (이전 초록/노랑/회색 15.0·11.3·15.1 보다 구분이 넓습니다). 칸마다 ✓ ! ✕ 기호를 함께 둡니다
    - 빨강(critical)은 히트맵 밖의 '이탈 위험' 배지에만 사용 + 항상 아이콘·라벨 동반
    ============================================================ */
 :root {
   color-scheme: light;
-  --page:            #f9f9f7;   /* 페이지 배경 */
-  --surface:         #fcfcfb;   /* 카드 표면 */
-  --surface-2:       #f2f2ee;   /* 살짝 눌린 표면 */
-  --ink:             #0b0b0b;   /* 본문 텍스트 */
-  --ink-2:           #52514e;   /* 보조 텍스트 */
-  --muted:           #898781;   /* 라벨·축 */
-  --line:            #e1e0d9;   /* 헤어라인 */
-  --border:          rgba(11,11,11,0.10);
+  --page:            #f3f6fa;   /* 페이지 배경 — 차가운 종이 */
+  --surface:         #ffffff;   /* 카드 표면 */
+  --surface-2:       #eef3f8;   /* 살짝 눌린 표면 */
+  --ink:             #0b1524;   /* 본문 텍스트 (페이지 대비 16.9:1) */
+  --ink-2:           #4a5568;   /* 보조 텍스트 */
+  --muted:           #5d6b82;   /* 라벨·축 — 페이지 위 4.98:1 */
+  --line:            #dfe6ef;   /* 헤어라인 */
+  --border:          rgba(16,40,80,0.10);
 
-  --brand:           #184f95;   /* 포인트 컬러(부산대 네이비) — 크롬·단일계열 막대 */
-  --brand-soft:      #cde2fb;   /* 막대 트랙(같은 계열의 밝은 단계) */
-  --brand-ink:       #0d366b;
+  --brand:           #1d4f91;   /* 포인트 컬러(부산대 네이비) — 크롬·단일계열 막대 */
+  --brand-soft:      #e3eefb;   /* 막대 트랙(같은 계열의 밝은 단계) */
+  --brand-ink:       #163f75;
   --cta-ink:         #ffffff;   /* 브랜드 버튼 위 글자 — 라이트에선 흰색이 8.1:1 */
+  --crystal:         #5aa9e6;   /* 얼음빛 — 그라데이션 끝, 이번 회차 기둥, 진행 중 카드 테두리 */
 
   /* ── 타이포 스케일 ────────────────────────────────────────────
      단계마다 눈에 띄는 차이를 두어 '무엇을 먼저 볼지'가 드러나게 합니다.
      (이전에는 이름 13px·부서 11px 처럼 간격이 좁아 위계가 읽히지 않았습니다) */
-  --fs-hero:  44px;   /* KPI 대표 숫자 */
-  --fs-xl:    29px;   /* KPI 숫자 */
-  --fs-lg:    19px;   /* 섹션 제목 */
+  --fs-hero:  46px;   /* KPI 대표 숫자 */
+  --fs-xl:    31px;   /* KPI 숫자 */
+  --fs-lg:    20px;   /* 섹션 제목 */
   --fs-md:    15px;   /* 카드 제목 */
   --fs-base:  14px;   /* 본문 · 참가자 이름 · 버튼 */
   --fs-sm:  12.5px;   /* 보조 설명 */
   --fs-xs:    11px;   /* 캡션 · 배지 · 번호 */
 
-  --good:            #0a7d0a;   /* 완료 — 흰색 ✓ 대비 5.3:1 확보를 위해 어둡게 (CVD 재검증 통과) */
-  --warning:         #fab219;   /* 마감 임박 미제출 */
-  --critical:        #d03b3b;   /* 이탈 위험 (히트맵 외부 전용) */
-  --neutral:         #c3c2b7;   /* 미제출(마감 지남) — 의도적 무채색 */
-  --neutral-soft:    #edece7;   /* 진행중 미제출 */
+  --good:            #0b7a6b;   /* 성공 신호(개근·완료 안내) — 빙하 호수 청록, 흰 표면 대비 5.2:1 */
+  --hm-done:         #1d4f91;   /* 히트맵 완료 칸 — 브랜드 네이비 (흰 ✓ 대비 8.1:1) */
+  --warning:         #f5b531;   /* 마감 임박 미제출 */
+  --critical:        #c93434;   /* 이탈 위험 (히트맵 외부 전용) */
+  --neutral:         #d8e0ea;   /* 미제출(마감 지남) — 의도적 저채도 회청 */
+  --neutral-soft:    #eef3f8;   /* 진행중 미제출 */
 
   --cell-ink-on-good: #ffffff;
   --cell-ink-on-warn: #3d2a00;
-  --cell-ink-on-neut: #4a4945;
+  --cell-ink-on-neut: #566273;
 
-  --radius: 12px;
-  --shadow: 0 1px 2px rgba(11,11,11,0.04), 0 1px 8px rgba(11,11,11,0.04);
+  --radius: 14px;
+  /* 서리 낀 유리처럼 — 짧고 진한 접지 그림자 + 넓고 옅은 냉기 그림자 */
+  --shadow:      0 1px 2px rgba(16,40,80,0.05), 0 8px 24px rgba(16,40,80,0.06);
+  --shadow-lift: 0 2px 4px rgba(16,40,80,0.06), 0 14px 34px rgba(16,40,80,0.11);
+  --glow: color-mix(in srgb, var(--crystal) 24%, transparent);   /* 페이지 맨 위 얼음빛 */
+  --beam: color-mix(in srgb, var(--crystal) 24%, transparent);   /* 이번 회차 기둥 */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --page:          #0d0d0d;
-    --surface:       #1a1a19;
-    --surface-2:     #232322;
-    --ink:           #ffffff;
-    --ink-2:         #c3c2b7;
-    --muted:         #898781;
-    --line:          #2c2c2a;
-    --border:        rgba(255,255,255,0.10);
-    --brand:         #3987e5;
-    --brand-soft:    #184f95;
-    --brand-ink:     #9ec5f4;
+    --page:          #0a111c;
+    --surface:       #111a28;
+    --surface-2:     #172234;
+    --ink:           #eef3f9;
+    --ink-2:         #a9b6c8;
+    --muted:         #8593a8;
+    --line:          #213047;
+    --border:        rgba(170,200,240,0.11);
+    --brand:         #6aa8ec;
+    --brand-soft:    #1b3558;
+    --brand-ink:     #a9cdf5;
     /* 다크의 밝은 브랜드색 위에서는 흰 글자가 3.6:1로 미달 → 어두운 글자(5.4:1) */
-    --cta-ink:       #0b1220;
-    --neutral:       #6b6a64;
-    --neutral-soft:  #2c2c2a;
-    --cell-ink-on-neut: #f2f2ee;
+    --cta-ink:       #06101d;
+    --neutral:       #2a3647;
+    --neutral-soft:  #1a2433;
+    --cell-ink-on-neut: #a3afc0;
     --critical:      #ff8a80;   /* 다크 표면 대비 7.6:1 (기존 #d03b3b는 3.6:1로 AA 미달) */
+    --good:          #4fd1b5;
+    --hm-done:       #4b8fe0;   /* 어두운 ✓ 대비 5.7:1 */
+    --cell-ink-on-good: #08121f;
+    --crystal:       #8cc8f5;
+    --shadow:        0 1px 2px rgba(0,0,0,0.30), 0 8px 24px rgba(0,0,0,0.28);
+    --shadow-lift:   0 2px 4px rgba(0,0,0,0.34), 0 14px 34px rgba(0,0,0,0.36);
+    --glow: color-mix(in srgb, var(--crystal) 13%, transparent);
+    --beam: color-mix(in srgb, var(--crystal) 17%, transparent);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page:          #0d0d0d;
-  --surface:       #1a1a19;
-  --surface-2:     #232322;
-  --ink:           #ffffff;
-  --ink-2:         #c3c2b7;
-  --muted:         #898781;
-  --line:          #2c2c2a;
-  --border:        rgba(255,255,255,0.10);
-  --brand:         #3987e5;
-  --brand-soft:    #184f95;
-  --brand-ink:     #9ec5f4;
-  --cta-ink:       #0b1220;   /* 밝은 브랜드색 위 어두운 글자 (5.4:1) */
-  --neutral:       #6b6a64;
-  --neutral-soft:  #2c2c2a;
-  --cell-ink-on-neut: #f2f2ee;
+  --page:          #0a111c;
+  --surface:       #111a28;
+  --surface-2:     #172234;
+  --ink:           #eef3f9;
+  --ink-2:         #a9b6c8;
+  --muted:         #8593a8;
+  --line:          #213047;
+  --border:        rgba(170,200,240,0.11);
+  --brand:         #6aa8ec;
+  --brand-soft:    #1b3558;
+  --brand-ink:     #a9cdf5;
+  --cta-ink:       #06101d;   /* 밝은 브랜드색 위 어두운 글자 (7.7:1) */
+  --neutral:       #2a3647;
+  --neutral-soft:  #1a2433;
+  --cell-ink-on-neut: #a3afc0;
   --critical:      #ff8a80;   /* 다크 표면 대비 7.6:1 */
+  --good:          #4fd1b5;
+  --hm-done:       #4b8fe0;   /* 어두운 ✓ 대비 5.7:1 */
+  --cell-ink-on-good: #08121f;
+  --crystal:       #8cc8f5;
+  --shadow:        0 1px 2px rgba(0,0,0,0.30), 0 8px 24px rgba(0,0,0,0.28);
+  --shadow-lift:   0 2px 4px rgba(0,0,0,0.34), 0 14px 34px rgba(0,0,0,0.36);
+  --glow: color-mix(in srgb, var(--crystal) 13%, transparent);
+  --beam: color-mix(in srgb, var(--crystal) 17%, transparent);
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  background: var(--page);
+  /* 글레이셜 — 페이지 맨 위에만 얼음빛이 옅게 번집니다(스크롤하면 사라지는 한 겹) */
+  background: radial-gradient(1100px 380px at 50% -140px, var(--glow), transparent 72%) no-repeat, var(--page);
   color: var(--ink);
   font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system,
                "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
@@ -120,7 +147,7 @@ body {
    ② 섹션 바(nav.secnav)   — 섹션 바로가기 + 미션 제출. 이 줄만 상단에 고정합니다.
    예전에는 메뉴 전체가 sticky 라 메뉴가 하나 늘 때마다 고정 영역이 두세 줄로 불어났고,
    375px 화면에서는 184px(화면의 23%)를 계속 가렸습니다. 고정 영역을 한 줄(52px)로 묶어 둡니다. */
-header.topbar { background: var(--page); }
+header.topbar { background: transparent; }   /* 얼음빛이 머리줄 뒤로 비치게 */
 .topbar-in {
   max-width: 1240px; margin: 0 auto; padding: 12px 20px;
   display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
@@ -130,7 +157,9 @@ header.topbar { background: var(--page); }
 }
 .brandmark .dot {
   width: 30px; height: 30px; border-radius: 8px; flex: none;
-  background: var(--brand); color: #fff;
+  background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 72%, var(--crystal)));
+  color: var(--cta-ink);   /* 다크의 밝은 브랜드색 위에서는 어두운 글자 */
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 28%, transparent);
   display: grid; place-items: center; font-weight: 700; font-size: 13px;
 }
 .brandmark h1 { font-size: var(--fs-md); margin: 0; font-weight: 700; letter-spacing: -0.02em; }
@@ -263,9 +292,12 @@ header.topbar { background: var(--page); }
 :root[data-theme="dark"] .navlink.accent:focus-visible { outline-color: #ff922b; }
 
 /* 마감이 지난 회차의 제출 버튼 — 진행 중 회차보다 한 단계 낮은 위계 */
+/* 버튼은 내용 높이를 지키고(flex:none) 카드 바닥에 붙습니다(margin-top:auto).
+   .lbtn 기본값 flex:1 이 남으면 2열 카드 높이가 다를 때 버튼이 54px 까지 늘어났습니다 */
 .mcard .lbtn.late {
-  width: 100%; justify-content: center; margin-top: 10px; min-height: 36px;
+  width: 100%; justify-content: center; margin-top: auto; min-height: 36px; flex: none;
 }
+.mcard details { margin-bottom: 10px; }
 
 /* 미션 제출 버튼 — 대시보드의 주 행동(primary CTA).
    섹션 바가 sticky라 스크롤해도 항상 손에 닿습니다. */
@@ -276,10 +308,25 @@ header.topbar { background: var(--page); }
   background: var(--brand); color: var(--cta-ink);
 }
 .cta:hover { filter: brightness(1.1); }
+.cta {
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--brand) 28%, transparent),
+              0 4px 14px color-mix(in srgb, var(--brand) 20%, transparent);
+}
+/* 상태가 바뀌는 속성만 골라 전환합니다(transition: all 금지) */
+.cta { transition-property: filter, transform, box-shadow; transition-duration: .15s; transition-timing-function: ease-out; }
+.navlink, .lbtn, .iconbtn {
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: .15s; transition-timing-function: ease-out;
+}
+/* 누르는 순간의 감촉 — 버튼 계열만. 움직임 줄이기 설정이면 끕니다 */
+.cta:active, .navlink:active, .lbtn:active, .iconbtn:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) {
+  .cta:active, .navlink:active, .lbtn:active, .iconbtn:active { transform: none; }
+}
 .cta:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .cta .i { font-size: 12px; }
 /* 진행 중 미션 카드 안의 제출 버튼 — 마감이 보이는 자리에서 바로 제출 */
-.mcard .cta { width: 100%; justify-content: center; margin-top: 10px; }
+.mcard .cta { width: 100%; justify-content: center; margin-top: auto; }
 /* 좁은 화면: 머리줄은 스크롤과 함께 올라가므로 높이보다 '무엇을 먼저 누를지'를 정리합니다.
    칩(참가 인원)과 부제는 바로 아래 KPI 카드에 그대로 있어 숨겨도 정보 손실이 없습니다. */
 @media (max-width: 560px) {
@@ -399,12 +446,20 @@ header.topbar { background: var(--page); }
 .simbar output { font-variant-numeric: tabular-nums; font-weight: 650; min-width: 96px; }
 
 /* ---------- 섹션 ---------- */
-section { margin-top: 34px; }
+section { margin-top: 40px; }
 /* 탭으로 이동했을 때 섹션 제목이 고정 섹션 바(52px) 밑에 가려지지 않게 */
 section[id] { scroll-margin-top: 64px; }
 .sec-head h2[tabindex="-1"]:focus { outline: none; }
 .sec-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-.sec-head h2 { font-size: var(--fs-lg); margin: 0; font-weight: 700; letter-spacing: -0.02em; }
+.sec-head h2 {
+  font-size: var(--fs-lg); margin: 0; font-weight: 750; letter-spacing: -0.025em; text-wrap: balance;
+  position: relative; padding-left: 14px;   /* flex 로 두면 옆 설명문과의 기준선 정렬이 어긋납니다 */
+}
+/* 섹션 첫머리의 얼음 기둥 — 모든 섹션이 같은 박자로 시작하게 하는 하나의 표식 */
+.sec-head h2::before {
+  content: ""; position: absolute; left: 0; top: 50%; width: 4px; height: 18px; margin-top: -9px;
+  border-radius: 4px; background: linear-gradient(180deg, var(--crystal), var(--brand));
+}
 .sec-head p  { font-size: var(--fs-sm); margin: 0; color: var(--muted); }
 
 .card {
@@ -413,16 +468,20 @@ section[id] { scroll-margin-top: 64px; }
 }
 
 /* ---------- KPI 타일 ---------- */
-.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-.kpi { padding: 16px 18px; }
+.kpis { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.kpi { padding: 18px 20px; }
 .kpi .lab { font-size: var(--fs-sm); color: var(--muted); font-weight: 600; }
-.kpi .val { font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.03em; margin-top: 2px; }
+.kpi .val { font-size: var(--fs-xl); font-weight: 750; letter-spacing: -0.035em; margin-top: 4px; }
 .kpi.hero .val { font-size: var(--fs-hero); line-height: 1.05; }
 .kpi .val .u { font-size: 0.5em; font-weight: 600; color: var(--ink-2); margin-left: 2px; }
 .kpi .sub { font-size: var(--fs-xs); color: var(--ink-2); margin-top: 4px; }
 /* 미터: 채움은 상태, 트랙은 같은 계열의 밝은 단계 */
-.meter { height: 8px; border-radius: 999px; background: var(--brand-soft); overflow: hidden; margin-top: 10px; }
-.meter > i { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
+.meter { height: 6px; border-radius: 999px; background: var(--brand-soft); overflow: hidden; margin-top: 12px; }
+/* 채움은 같은 계열 안에서 네이비 → 얼음빛으로 흐릅니다(값은 길이가, 색은 분위기만 맡음) */
+.meter > i {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 45%, var(--crystal)));
+}
 .kpi.risk .val { color: var(--critical); }
 
 /* ---------- 필터 줄 ---------- */
@@ -435,6 +494,10 @@ section[id] { scroll-margin-top: 64px; }
   border: 1px solid var(--border); background: var(--surface); color: var(--ink);
 }
 .filters .spacer { margin-left: auto; }
+.filters select:focus-visible, .filters input[type=search]:focus-visible {
+  outline: none; border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 20%, transparent);
+}
 .toggle {
   display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2);
   cursor: pointer; user-select: none;
@@ -445,7 +508,9 @@ section[id] { scroll-margin-top: 64px; }
 /* 칸 너비에 상한을 두어 격자가 옆으로 늘어지지 않게 합니다.
    (이전에는 1fr이라 칸이 112×34px까지 벌어져 기호 하나에 여백이 과했습니다)
    남는 가로 공간은 격자를 가운데 두어 의도적으로 보이게 합니다. */
-.hm { display: grid; gap: 2px; min-width: 720px; }
+.hm { display: grid; gap: 2px; min-width: 720px;
+  isolation: isolate;   /* 이번 회차 기둥(::before, z-index -1)을 카드 배경 위·칸 아래에 깔기 위한 쌓임 맥락 */
+}
 /* 칸이 상한에 걸려 남는 가로 여백은 격자를 가운데로 모아 의도적으로 보이게 합니다 */
 .hm-row {
   display: grid; grid-template-columns: 200px repeat(8, minmax(52px, 88px)) 72px;
@@ -456,7 +521,13 @@ section[id] { scroll-margin-top: 64px; }
   padding: 6px 2px 8px; line-height: 1.25;
 }
 .hm-head .hcell small { display: block; font-weight: 500; font-variant-numeric: tabular-nums; }
-.hm-head .hcell.cur { color: var(--brand-ink); }
+.hm-head .hcell.cur { color: var(--brand-ink); position: relative; }
+/* 이번 회차 기둥 — 머리칸과 그 열의 칸들이 같은 얼음빛 띠를 이어 붙여 한 열을 비춥니다 */
+.hm-head .hcell.cur::before, .cell.cur::before {
+  content: ""; position: absolute; z-index: -1; inset: -2px -3px; background: var(--beam);
+}
+.hm-head .hcell.cur::before { inset: 0 -3px -2px; border-radius: 9px 9px 0 0; }
+.hm-row:last-child .cell.cur::before { bottom: -6px; border-radius: 0 0 9px 9px; }
 .name-cell {
   display: flex; align-items: center; gap: 8px; padding: 0 8px;
   font-size: 13px; border-radius: 8px; cursor: pointer; background: var(--surface-2);
@@ -474,7 +545,7 @@ section[id] { scroll-margin-top: 64px; }
   min-height: 30px; border-radius: 7px; display: grid; place-items: center;
   font-size: var(--fs-sm); font-weight: 700; cursor: default; position: relative;
 }
-.cell.done   { background: var(--good);        color: var(--cell-ink-on-good); }
+.cell.done   { background: var(--hm-done);     color: var(--cell-ink-on-good); }
 .cell.imm    { background: var(--warning);     color: var(--cell-ink-on-warn); }
 .cell.missed { background: var(--neutral);     color: var(--cell-ink-on-neut); }
 .cell.open   { background: var(--neutral-soft); color: var(--muted); }
@@ -493,7 +564,7 @@ section[id] { scroll-margin-top: 64px; }
   width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center;
   font-size: 11px; font-weight: 700; font-style: normal;
 }
-.lg-done{background:var(--good);color:var(--cell-ink-on-good)}
+.lg-done{background:var(--hm-done);color:var(--cell-ink-on-good)}
 .lg-imm{background:var(--warning);color:var(--cell-ink-on-warn)}
 .lg-miss{background:var(--neutral);color:var(--cell-ink-on-neut)}
 .lg-open{background:var(--neutral-soft);color:var(--muted)}
@@ -503,15 +574,16 @@ section[id] { scroll-margin-top: 64px; }
 #tip {
   position: fixed; z-index: 90; pointer-events: none; opacity: 0;
   transition: opacity .12s; max-width: 280px;
-  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
-  border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.18); padding: 10px 12px; font-size: 12.5px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--ink);
+  border: 1px solid var(--border); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border-radius: 12px; box-shadow: var(--shadow-lift); padding: 10px 12px; font-size: 12.5px;
 }
 #tip .t { font-weight: 650; margin-bottom: 2px; }
 #tip .r { color: var(--ink-2); }
 
 /* ---------- 미션 카드 ---------- */
 .missions { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); }
-.mcard { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.mcard { padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
 .mcard .top { display: flex; align-items: center; gap: 8px; }
 .mcard .rd {
   font-size: 11px; font-weight: 700; color: var(--brand-ink);
@@ -526,7 +598,10 @@ section[id] { scroll-margin-top: 64px; }
 .mcard .stat { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
 .mcard .stat b { font-size: 20px; font-weight: 680; font-variant-numeric: tabular-nums; }
 .mcard .stat span { font-size: 12px; color: var(--ink-2); }
-.mcard.is-cur { outline: 2px solid color-mix(in srgb, var(--brand) 55%, transparent); outline-offset: -1px; }
+.mcard.is-cur {
+  border-color: color-mix(in srgb, var(--crystal) 70%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--crystal) 16%, transparent), var(--shadow-lift);
+}
 .mcard.is-fut { opacity: .62; }
 
 /* 보안 서약 확인 */
@@ -542,7 +617,6 @@ section[id] { scroll-margin-top: 64px; }
   background: color-mix(in srgb, var(--good) 15%, var(--surface-2));
   color: var(--good); font-weight: 650;
 }
-:root[data-theme="dark"] .pledge .pill.ok { color: #7fd47f; }
 @media (max-width: 700px) {
   .pledge { grid-template-columns: 1fr; }
   .pledge .acts .lbtn, .pledge .acts .cta { flex: 1; }
@@ -601,7 +675,8 @@ section[id] { scroll-margin-top: 64px; }
 }
 .lbtn:hover { border-color: color-mix(in srgb, var(--brand) 45%, var(--border)); }
 .lbtn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-.lbtn.play { background: color-mix(in srgb, #e02b20 10%, var(--surface)); border-color: color-mix(in srgb, #e02b20 30%, transparent); }
+/* 영상 버튼 — 빨간 칸이 여덟 줄 세로로 늘어서지 않게, 빨강은 ▶ 아이콘 하나에만 남깁니다 */
+.lbtn.play { background: var(--surface); }
 .lbtn.play .i { color: #e02b20; font-size: 13px; }
 :root[data-theme="dark"] .lbtn.play .i { color: #ff6b5e; }
 .lbtn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
@@ -642,8 +717,7 @@ section[id] { scroll-margin-top: 64px; }
   font-size: 10.5px; font-weight: 650; padding: 2px 7px; border-radius: 999px;
   border: 1px solid var(--border); color: var(--ink-2); background: var(--surface-2); white-space: nowrap;
 }
-.badge.g { color: #0a6d0a; background: color-mix(in srgb, var(--good) 12%, var(--surface)); border-color: color-mix(in srgb, var(--good) 30%, transparent); }
-:root[data-theme="dark"] .badge.g { color: #7fdc7f; }
+.badge.g { color: var(--good); background: color-mix(in srgb, var(--good) 10%, var(--surface)); border-color: color-mix(in srgb, var(--good) 28%, transparent); }
 .badge.b { color: var(--brand-ink); background: color-mix(in srgb, var(--brand) 12%, var(--surface)); border-color: color-mix(in srgb, var(--brand) 30%, transparent); }
 .lb-row .pt { font-weight: 680; font-variant-numeric: tabular-nums; }
 .lb-row .pt small { font-weight: 500; color: var(--muted); font-size: 11px; margin-left: 2px; }
@@ -671,10 +745,12 @@ table.data td.n { font-variant-numeric: tabular-nums; }
   position: fixed; inset: 0; z-index: 80; display: none;
 }
 #drawer.on { display: block; }
-#drawer .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.36); }
+#drawer .scrim { position: absolute; inset: 0; background: rgba(10,17,28,.38);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 #drawer .panel {
   position: absolute; top: 0; right: 0; bottom: 0; width: min(460px, 100%);
   background: var(--surface); border-left: 1px solid var(--border);
+  box-shadow: -24px 0 48px rgba(10,17,28,.16);
   overflow-y: auto; padding: 20px 22px 40px;
 }
 #drawer .panel h3 { margin: 0; font-size: 19px; font-weight: 680; }
@@ -715,6 +791,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   .kpi { padding: 13px 14px; }
   .kpi.hero { grid-column: 1 / -1; }
   .kpi .val { font-size: 25px; }
+  section { margin-top: 32px; }
 
   /* ① 미션 카드 — 1열 세로 나열(8x201px)이라 가장 길었습니다.
      내용이 짧아 2열로 충분하고, 높이가 절반 가까이 줄어듭니다. */
@@ -726,6 +803,9 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   .mcard .out { font-size: var(--fs-xs); }
   .mcard .stat b { font-size: 17px; }
   .mcard .stat span { font-size: var(--fs-xs); }
+  /* 마감 지난 회차 버튼 — 2열 카드 폭에서는 "1회차 제출"로 줄여 한 줄에 둡니다.
+     카드 머리의 "마감 완료"가 늦은 제출임을 이미 말해 줍니다 */
+  .mcard .lbtn.late .opt { display: none; }
   /* 진행 중 회차의 제출 버튼은 2열을 가로질러 눈에 띄게 */
   .mcard.is-cur { grid-column: 1 / -1; }
 
@@ -1657,7 +1737,7 @@ function renderHeatmap(D) {
     tr.appendChild(nb);
 
     r.cells.forEach(c => {
-      const d = el("div", "cell " + c.state, STATE_SYM[c.state]);
+      const d = el("div", "cell " + c.state + (c.mission.phase === "current" ? " cur" : ""), STATE_SYM[c.state]);
       d.setAttribute("role", "img");
       d.setAttribute("aria-label", `${displayName(r)} ${c.mission.round}회차 ${STATE_LABEL[c.state]}`);
       if (c.state !== "future") {
@@ -1752,7 +1832,7 @@ function renderMissions(D) {
             // 마감이 지난 회차 — 늦게라도 제출할 수 있게 계속 열어 둡니다.
             // 진행 중 회차와 구분되도록 보조(테두리) 버튼으로 표시합니다.
             : `<a class="lbtn late" href="${esc(CONFIG.FORM_URL)}" target="_blank" rel="noopener noreferrer">
-                 <span aria-hidden="true">✎</span> ${m.round}회차 지금이라도 제출</a>`)
+                 <span aria-hidden="true">✎</span> ${m.round}회차 <span class="opt">지금이라도 </span>제출</a>`)
         : ""}`;
     box.appendChild(c);
   });
