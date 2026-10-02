@@ -114,20 +114,17 @@ body {
 }
 .wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px 72px; }
 
-/* ---------- 상단 바 ---------- */
-header.topbar {
-  position: sticky; top: 0; z-index: 40;
-  background: color-mix(in srgb, var(--page) 88%, transparent);
-  backdrop-filter: saturate(180%) blur(8px);
-  border-bottom: 1px solid var(--line);
-}
+/* ---------- 상단 바 ----------
+   두 층으로 나눕니다.
+   ① 머리줄(header.topbar) — 브랜드·안내 칩·보조 메뉴. 스크롤하면 함께 올라갑니다.
+   ② 섹션 바(nav.secnav)   — 섹션 바로가기 + 미션 제출. 이 줄만 상단에 고정합니다.
+   예전에는 메뉴 전체가 sticky 라 메뉴가 하나 늘 때마다 고정 영역이 두세 줄로 불어났고,
+   375px 화면에서는 184px(화면의 23%)를 계속 가렸습니다. 고정 영역을 한 줄(52px)로 묶어 둡니다. */
+header.topbar { background: var(--page); }
 .topbar-in {
   max-width: 1240px; margin: 0 auto; padding: 12px 20px;
   display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
 }
-/* 간격이 16px 이던 시절엔 항목 폭 합이 1220px 로 가용폭(1200px)을 20px 넘겨
-   최대 폭에서도 상단바가 두 줄이 됐습니다. 11px 로 조여 한 줄에 담습니다.
-   상단바는 sticky 라 한 줄(54px)과 두 줄(116px)의 차이가 그대로 화면 손실입니다. */
 .brandmark {
   display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0;
 }
@@ -141,11 +138,66 @@ header.topbar {
 
 .chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
-/* 제출 버튼 + 테마 버튼 묶음.
-   상단바 항목이 늘면서 테마 아이콘만 혼자 다음 줄로 떨어지는 구간(940~960px)이
-   생겨, 둘을 한 덩어리로 만들어 항상 함께 움직이게 했습니다.
-   조작부 전체를 묶으면 줄바꿈이 거칠어져 넓은 화면에서 오히려 한 줄이 늘어납니다. */
-.cta-group { display: flex; align-items: center; gap: 10px; flex: none; }
+/* ---------- 섹션 바 (고정) ----------
+   왼쪽 탭은 '어디로 갈지', 오른쪽은 '지금 할 일'(진행 회차·D-day + 미션 제출)입니다.
+   채움 버튼은 이 줄에 미션 제출 하나만 둡니다. 머리줄의 주황(A/S)과 같은 줄에서
+   두 강조색이 서로를 잡아먹지 않게 하려는 것입니다. */
+.secnav {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(8px);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.secnav-in {
+  max-width: 1240px; margin: 0 auto; padding: 0 20px; height: 52px;
+  display: flex; align-items: center; gap: 14px;
+}
+/* 탭이 넘치면 줄을 바꾸지 않고 옆으로 밉니다 — 고정 영역 높이가 절대 늘지 않게 */
+.tabs {
+  flex: 1; min-width: 0; height: 100%;
+  display: flex; align-items: stretch; gap: 2px;
+  overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  position: relative; flex: none;
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 12px;
+  font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2);
+  text-decoration: none; white-space: nowrap;
+  transition-property: color; transition-duration: .15s; transition-timing-function: ease-out;
+}
+.tab:hover { color: var(--ink); }
+.tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -6px; border-radius: 10px; }
+/* 지금 보고 있는 섹션 — 글자색과 밑줄, 신호는 한 가지 색으로만 */
+.tab[aria-current="true"] { color: var(--brand-ink); }
+.tab[aria-current="true"]::after {
+  content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px;
+  height: 2px; border-radius: 2px; background: var(--brand);
+}
+/* 집중 관리 인원 — 탭에서는 빨강을 쓰지 않습니다. 경보는 섹션 안 배지가 맡고,
+   어느 화면에서나 보이는 탭이 늘 빨갛게 깜빡이면 참가자에게 불필요한 압박이 됩니다 */
+.tab .cnt {
+  min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px;
+  display: inline-grid; place-items: center;
+  font-size: var(--fs-xs); font-weight: 700; font-variant-numeric: tabular-nums;
+  background: var(--surface-2); color: var(--ink-2);
+}
+.tab .cnt:empty { display: none; }
+.secnav-act { flex: none; display: flex; align-items: center; gap: 10px; }
+.cta .short, .navlink .short, .cta .dd { display: none; }
+/* 탭이 넘쳐 오른쪽에 더 있을 때만 끝을 흐립니다 (JS 가 data-more 를 켭니다).
+   넘치지 않는 넓은 화면에서 마지막 탭까지 흐려지는 일이 없도록 조건부로 겁니다 */
+.tabs[data-more] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+          mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+/* 중간 폭(태블릿·좁은 노트북): 탭 여섯 개와 진행 칩이 한 줄에 다 들어가지 않습니다.
+   진행 칩을 접고 D-day 를 제출 버튼 끝에 붙여 '언제까지'는 그대로 보이게 합니다 */
+@media (max-width: 900px) {
+  .secnav-act .chip { display: none; }
+  .cta .dd { display: inline; }
+}
 /* 상단바는 두 계열로만 구성합니다.
    ① 칩  = 읽는 것(비대화형) — 테두리 없는 알약, 배경만 은은하게
    ② 버튼 = 누르는 것        — 테두리/채움이 있는 사각(반경 9px), 높이 36px 통일
@@ -216,7 +268,7 @@ header.topbar {
 }
 
 /* 미션 제출 버튼 — 대시보드의 주 행동(primary CTA).
-   상단바가 sticky라 스크롤해도 항상 손에 닿습니다. */
+   섹션 바가 sticky라 스크롤해도 항상 손에 닿습니다. */
 .cta {
   font: inherit; font-size: var(--fs-sm); font-weight: 700; text-decoration: none; white-space: nowrap;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -228,9 +280,8 @@ header.topbar {
 .cta .i { font-size: 12px; }
 /* 진행 중 미션 카드 안의 제출 버튼 — 마감이 보이는 자리에서 바로 제출 */
 .mcard .cta { width: 100%; justify-content: center; margin-top: 10px; }
-/* 좁은 화면: 상단바가 sticky라 높으면 화면을 계속 가립니다.
-   칩(진행 회차·참가 인원·D-day)과 부제는 바로 아래 KPI 카드에 그대로 있어
-   숨겨도 정보 손실이 없습니다. 제출 버튼은 남깁니다. */
+/* 좁은 화면: 머리줄은 스크롤과 함께 올라가므로 높이보다 '무엇을 먼저 누를지'를 정리합니다.
+   칩(참가 인원)과 부제는 바로 아래 KPI 카드에 그대로 있어 숨겨도 정보 손실이 없습니다. */
 @media (max-width: 560px) {
   /* 높이(36px)는 유지하고 가로 여백만 줄여 정렬이 흐트러지지 않게 합니다 */
   .cta { padding: 0 13px; }
@@ -239,10 +290,19 @@ header.topbar {
      누를 수 있는 칩(성과공유회 안내)은 모바일에서도 유일한 진입점이라 남깁니다 */
   .topbar .chip:not(.link) { display: none; }
   .brandmark p { display: none; }
-  /* 컨트롤이 한 줄 늘어나므로 여백을 조여 sticky 높이를 억제합니다 */
-  .topbar-in { padding: 9px 16px; gap: 9px; }
-  .cta-group { gap: 9px; }
+  .topbar-in { padding: 10px 16px 12px; gap: 8px; }
   .chips { gap: 6px; }
+  /* 머리줄 배치: [브랜드 ··· 테마] / [A/S 신청 — 한 줄 전체] / [성과공유회 · 보조 메뉴]
+     지금 눌러야 할 사람이 있는 A/S 에 폭 전체를 주고, 보조 메뉴는 남는 줄에 나란히 둡니다 */
+  #themeBtn { order: 1; }
+  .navlink.accent { order: 2; flex: 1 1 100%; justify-content: center; height: 42px; }
+  .chips, .navlink:not(.accent) { order: 3; }
+  /* 섹션 바: 탭은 옆으로 밀어 보고(끝을 흐려 더 있음을 알림), 제출 버튼은 짧은 이름 + D-day */
+  .secnav-in { height: 48px; padding: 0 12px 0 6px; gap: 8px; }
+  .tab { padding: 0 10px; }
+  .tab[aria-current="true"]::after { left: 10px; right: 10px; }
+  .cta .long, .navlink .long { display: none; }
+  .cta .short, .navlink .short { display: inline; }
 }
 
 /* ---------- 데모 배너 ---------- */
@@ -340,6 +400,9 @@ header.topbar {
 
 /* ---------- 섹션 ---------- */
 section { margin-top: 34px; }
+/* 탭으로 이동했을 때 섹션 제목이 고정 섹션 바(52px) 밑에 가려지지 않게 */
+section[id] { scroll-margin-top: 64px; }
+.sec-head h2[tabindex="-1"]:focus { outline: none; }
 .sec-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .sec-head h2 { font-size: var(--fs-lg); margin: 0; font-weight: 700; letter-spacing: -0.02em; }
 .sec-head p  { font-size: var(--fs-sm); margin: 0; color: var(--muted); }
@@ -493,8 +556,10 @@ section { margin-top: 34px; }
   display: grid; grid-template-columns: 52px 1fr auto; gap: 14px; align-items: center;
   padding: 9px 16px; border-bottom: 1px solid var(--line);
 }
-/* 리스트 안의 버튼은 카드보다 작게 — 행 높이를 낮춰 8줄이 한눈에 들어오게 */
-.erow .lbtn { padding: 6px 11px; font-size: var(--fs-sm); }
+/* 리스트 안의 버튼은 카드보다 작게 — 행 높이를 낮춰 8줄이 한눈에 들어오게.
+   .lbtn 의 기본값 flex:1 을 그대로 두면 폭이 최소 내용 폭까지 줄어
+   "▶ 영상"이 아이콘과 글자로 두 줄 꺾였습니다(버튼 높이 53px). 폭은 내용에 맞추고 줄바꿈을 막습니다. */
+.erow .lbtn { flex: none; white-space: nowrap; padding: 6px 11px; font-size: var(--fs-sm); }
 .erow:last-child { border-bottom: none; }
 .erow:hover { background: var(--surface-2); }
 .erow.upcoming { opacity: .6; }
@@ -615,9 +680,9 @@ table.data td.n { font-variant-numeric: tabular-nums; }
 #drawer .panel h3 { margin: 0; font-size: 19px; font-weight: 680; }
 #drawer .panel .dept { color: var(--muted); font-size: 13px; }
 #drawer .close {
-  position: absolute; top: 14px; right: 16px;
+  position: absolute; top: 10px; right: 12px;
   border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
-  width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+  width: 40px; height: 40px; border-radius: 10px; cursor: pointer;   /* 누름 영역 40px 이상 */
 }
 .d-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 4px; }
 .d-stats > div { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
@@ -644,6 +709,13 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
    교육이 1089px 였습니다. 정보를 지우지 않고 밀도를 올려 스크롤을 줄입니다.
    ============================================================ */
 @media (max-width: 640px) {
+  /* ⓪ KPI 타일 — 1열로 다섯 장이 쌓여 763px 였습니다.
+     대표 지표만 한 줄 전체를 쓰고 나머지 넷은 2열로 둡니다. */
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .kpi { padding: 13px 14px; }
+  .kpi.hero { grid-column: 1 / -1; }
+  .kpi .val { font-size: 25px; }
+
   /* ① 미션 카드 — 1열 세로 나열(8x201px)이라 가장 길었습니다.
      내용이 짧아 2열로 충분하고, 높이가 절반 가까이 줄어듭니다. */
   .missions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -701,19 +773,32 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
     <a class="navlink accent" id="asLink" target="_blank" rel="noopener noreferrer"
        title="담당자가 부서로 찾아가 1:1로 도와드립니다 · 로그인 없이 신청할 수 있습니다">🛠 찾아가는 AX-A/S 신청</a>
     <a class="navlink" id="surveyLink" target="_blank" rel="noopener noreferrer"
-       title="AI 교육 만족도 조사 현황 보기 (학교 구글 계정 로그인 필요)">📝 교육 만족도 조사 현황</a>
+       title="AI 교육 만족도 조사 현황 보기 (학교 구글 계정 로그인 필요)">📝 <span class="long">교육 만족도 조사 현황</span><span class="short">만족도 조사</span></a>
     <a class="navlink" href="how-it-works.html"
        title="이 대시보드가 어떻게 동작하는지 한 장으로 보기">동작 방식 ↗</a>
-    <!-- 제출 버튼과 테마 버튼은 한 덩어리로 둡니다. 따로 두면 940~960px 구간에서
-         테마 아이콘만 혼자 다음 줄로 떨어져 상단바가 통째로 한 줄 높아졌습니다. -->
-    <span class="cta-group">
-      <a class="cta" id="submitCta" target="_blank" rel="noopener noreferrer"
-         title="구글 폼이 새 창에서 열립니다 (학교 구글 계정 로그인 필요)">
-         <span class="i" aria-hidden="true">✎</span> 미션 제출하기</a>
-      <button class="iconbtn" id="themeBtn" title="라이트/다크 전환" aria-label="라이트/다크 전환">◐</button>
-    </span>
+    <button class="iconbtn" id="themeBtn" title="라이트/다크 전환" aria-label="라이트/다크 전환">◐</button>
   </div>
 </header>
+
+<!-- 섹션 바 — 이 줄만 상단에 고정됩니다. 탭은 아래 섹션의 id 로 이동합니다 -->
+<nav class="secnav" id="secnav" aria-label="섹션 바로가기">
+  <div class="secnav-in">
+    <div class="tabs">
+      <a class="tab" href="#sec-kpi">전체 현황</a>
+      <a class="tab" href="#sec-heat">마에스트로 현황</a>
+      <a class="tab" href="#sec-missions">미션별 현황</a>
+      <a class="tab" href="#sec-edu">교육 다시보기</a>
+      <a class="tab" href="#sec-risk">집중 관리 <span class="cnt" id="riskCnt"></span></a>
+      <a class="tab" href="#sec-lb">리더보드</a>
+    </div>
+    <span class="secnav-act">
+      <span class="chip accent" id="curChip"></span>
+      <a class="cta" id="submitCta" target="_blank" rel="noopener noreferrer"
+         title="구글 폼이 새 창에서 열립니다 (학교 구글 계정 로그인 필요)">
+         <span class="i" aria-hidden="true">✎</span> <span class="long">미션 제출하기</span><span class="short">제출</span><span class="dd" id="ctaDd"></span></a>
+    </span>
+  </div>
+</nav>
 
 <div class="wrap">
 
@@ -733,7 +818,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   </div>
 
   <!-- ① KPI -->
-  <section>
+  <section id="sec-kpi">
     <div class="sec-head">
       <h2>전체 현황</h2>
       <p>오늘 날짜와 미션 마감일을 비교해 자동 계산됩니다</p>
@@ -743,7 +828,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   </section>
 
   <!-- ② 히트맵 -->
-  <section>
+  <section id="sec-heat">
     <div class="sec-head">
       <h2>마에스트로 × 미션 현황</h2>
       <p>칸에 마우스를 올리면 상세, 이름을 누르면 개인 카드가 열립니다</p>
@@ -781,7 +866,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   </section>
 
   <!-- ③ 미션별 현황 -->
-  <section>
+  <section id="sec-missions">
     <div class="sec-head">
       <h2>미션별 제출 현황</h2>
       <p>총 8개 과제 · 마감일 기준</p>
@@ -791,7 +876,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   </section>
 
   <!-- ③-2 교육 다시보기 -->
-  <section>
+  <section id="sec-edu">
     <div class="sec-head">
       <h2>AI 교육 다시보기</h2>
       <p>총 8회 + 성과공유회 · 영상과 자료(Padlet)를 다시 볼 수 있습니다</p>
@@ -809,7 +894,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   </section>
 
   <!-- ④ 이탈 위험 -->
-  <section>
+  <section id="sec-risk">
     <div class="sec-head">
       <h2>집중 관리 대상</h2>
       <p>최근 2개 회차 연속 미제출 시 자동 표시</p>
@@ -819,7 +904,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   </section>
 
   <!-- ⑤ 리더보드 -->
-  <section>
+  <section id="sec-lb">
     <div class="sec-head">
       <h2>참여 리더보드</h2>
       <p>제출 10점 · 부서 스터디 운영 5점 · 함께한 동료 1명당 1점</p>
@@ -1311,6 +1396,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt
 const STATE_LABEL = { done:"완료", imm:"마감 임박 · 미제출", missed:"미제출", open:"진행 중 · 미제출", future:"예정" };
 const STATE_SYM   = { done:"✓", imm:"!", missed:"✕", open:"·", future:"" };
 
+let secNavRefresh = () => {};                       // bindSecNav() 가 채웁니다
 function render() {
   const D = computeAll();
   renderMode(D);
@@ -1321,6 +1407,7 @@ function render() {
     MODE === "preview" ? "샘플(가상) 활동 데이터 · 시뮬레이션 시점 " + fmtFull(STATE.today)
     : MODE === "roster" ? "확정 명단 " + D.rows.length + "명 · 출처 「추천선발 직원 명단v3.0.xlsx」 · 제출 데이터 미연결"
     : "마지막 갱신 " + (STATE.lastFetch ? fmtDateTime(STATE.lastFetch) : "—") + " · 60초마다 자동 갱신";
+  secNavRefresh();
 }
 
 /* 데이터 품질 경고 — 조용히 누락되면 운영자가 영구히 알 수 없는 항목들
@@ -1466,11 +1553,14 @@ function renderTop(D) {
   const dd = dayDiff(showcase, STATE.today);
   const cur = D.current;
   const chips = [];
-  if (D.beforeStart) {
-    chips.push(`<span class="chip accent"><b>준비 중</b> · 8/24 시작</span>`);
-  } else {
-    chips.push(`<span class="chip accent">${cur ? "진행 중 <b>" + cur.round + "회차</b> · D-" + cur.dday : "<b>전 회차 마감</b>"}</span>`);
-  }
+  // 진행 회차·D-day 는 섹션 바의 제출 버튼 옆에 둡니다 — '지금 할 일'과 '언제까지'를 한자리에
+  const due = cur ? (cur.dday === 0 ? "오늘 마감" : "D-" + cur.dday) : "";
+  $("#curChip").innerHTML = D.beforeStart ? `<b>준비 중</b> · 8/24 시작`
+    : cur ? `진행 중 <b>${cur.round}회차</b> · ${due}` : `<b>전 회차 마감</b>`;
+  const ctaDd = $("#ctaDd");                       // 제출 폼이 없으면 버튼째 지워집니다
+  if (ctaDd) ctaDd.textContent = !D.beforeStart && cur ? " · " + due : "";
+  // 집중 관리 인원 — '2회차 연속 미제출'을 판정할 수 있을 때(마감 2회차 이상)만 숫자를 붙입니다
+  $("#riskCnt").textContent = D.passedCount >= 2 ? (D.rows.filter(r => r.atRisk).length || "") : "";
   chips.push(`<span class="chip">참가 <b>${D.rows.length}</b>명</span>`);
   // 이 칩만 누를 수 있으므로 button + ⓘ 로 상호작용을 명시합니다
   chips.push(`<button class="chip link" id="showcaseChip" title="성과공유회 안내 보기">
@@ -1805,7 +1895,7 @@ function showPanel(label) {
   $("#drawer").classList.add("on");
   $("#drawer").setAttribute("aria-hidden", "false");
   DRAWER.lastFocus = document.activeElement;
-  document.querySelectorAll(".wrap, header.topbar").forEach(n => n.setAttribute("inert", ""));
+  document.querySelectorAll(".wrap, header.topbar, nav.secnav").forEach(n => n.setAttribute("inert", ""));
   document.body.style.overflow = "hidden";
   $("#drawer .close").focus();
 }
@@ -1813,7 +1903,7 @@ function closeDrawer() {
   if (!$("#drawer").classList.contains("on")) return;
   $("#drawer").classList.remove("on");
   $("#drawer").setAttribute("aria-hidden", "true");
-  document.querySelectorAll(".wrap, header.topbar").forEach(n => n.removeAttribute("inert"));
+  document.querySelectorAll(".wrap, header.topbar, nav.secnav").forEach(n => n.removeAttribute("inert"));
   document.body.style.overflow = "";
   DRAWER.openRowNo = null;
   if (DRAWER.lastFocus && document.contains(DRAWER.lastFocus)) DRAWER.lastFocus.focus();
@@ -2029,9 +2119,69 @@ function updateSimLabel() {
   $("#simPhase").textContent = cur ? `${cur.round}회차 진행 중` : "전 회차 마감";
 }
 
+/* 섹션 바 — 탭을 누르면 그 섹션으로 가고, 스크롤하면 지금 보는 섹션의 탭에 밑줄을 긋습니다.
+   스크롤 위치로 판정합니다. 히트맵처럼 화면보다 긴 섹션이 있어
+   IntersectionObserver 의 '보이는 비율' 기준은 두 탭이 번갈아 켜지는 경우가 생깁니다. */
+function bindSecNav() {
+  const nav = $("#secnav");
+  const tabs = [...nav.querySelectorAll(".tab")];
+  const secs = tabs.map(t => document.getElementById(t.hash.slice(1)));
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+  let current = -2;
+  const mark = i => {
+    if (i === current) return;
+    current = i;
+    tabs.forEach((t, k) => k === i ? t.setAttribute("aria-current", "true") : t.removeAttribute("aria-current"));
+    // 좁은 화면에서 탭 줄이 옆으로 밀려 있으면 켜진 탭이 보이도록 당겨 옵니다
+    const t = tabs[i], strip = t && t.parentElement;
+    if (strip && strip.scrollWidth > strip.clientWidth) {
+      const l = t.offsetLeft - 24, r = t.offsetLeft + t.offsetWidth + 24;
+      if (l < strip.scrollLeft || r > strip.scrollLeft + strip.clientWidth)
+        strip.scrollTo({ left: Math.max(0, l), behavior: reduce.matches ? "auto" : "smooth" });
+    }
+  };
+  let queued = false, lockUntil = 0;
+  const update = () => {
+    queued = false;
+    if (performance.now() < lockUntil) return;     // 탭을 눌러 이동하는 동안은 누른 탭을 유지
+    const line = nav.getBoundingClientRect().bottom + 24;
+    let i = -1;
+    secs.forEach((sec, k) => { if (sec && !sec.hidden && sec.getBoundingClientRect().top <= line) i = k; });
+    // 맨 아래에 닿으면 마지막 섹션이 짧아 기준선에 못 미쳐도 그 탭을 켭니다
+    if (i >= 0 && innerHeight + scrollY >= document.documentElement.scrollHeight - 4) i = secs.length - 1;
+    mark(i);
+  };
+  const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+  addEventListener("scroll", queue, { passive: true });
+  const strip = nav.querySelector(".tabs");
+  const fit = () => strip.toggleAttribute("data-more",
+    strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1);
+  strip.addEventListener("scroll", fit, { passive: true });
+  addEventListener("resize", () => { fit(); queue(); });
+  secNavRefresh = () => { fit(); queue(); };
+  fit();
+  nav.addEventListener("click", e => {
+    const t = e.target.closest(".tab");
+    const sec = t && document.getElementById(t.hash.slice(1));
+    if (!sec) return;
+    e.preventDefault();
+    // 마지막 두 섹션은 화면 맨 위까지 올라오지 못해 스크롤 판정으로는 '리더보드'가 켜집니다.
+    // 누른 탭을 바로 켜고, 부드러운 스크롤이 끝날 때까지 판정을 잠시 멈춥니다.
+    mark(tabs.indexOf(t));
+    lockUntil = performance.now() + 1000;
+    sec.scrollIntoView({ behavior: reduce.matches ? "auto" : "smooth", block: "start" });
+    history.replaceState(null, "", t.hash);          // 뒤로 가기 기록을 탭 클릭으로 채우지 않습니다
+    // 키보드 사용자는 이동한 섹션의 제목에서 이어서 탐색합니다
+    const h = sec.querySelector("h2");
+    if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+  });
+  update();
+}
+
 async function init() {
   STATE.today = startOfDay(new Date());
   bindEvents();
+  bindSecNav();
 
   // 제출 폼 링크 연결 — URL이 비어 있으면 버튼을 숨겨 죽은 링크를 노출하지 않습니다
   const cta = $("#submitCta");
@@ -2090,6 +2240,8 @@ async function init() {
       }
     };
     await tick();
+    const target = location.hash && document.getElementById(location.hash.slice(1));
+    if (target && target.matches("section")) target.scrollIntoView({ block: "start" });
     setInterval(tick, CONFIG.REFRESH_MS);
   } else {
     // 시트 미연결 — 확정 명단 + 실제 현황(제출 0건)
