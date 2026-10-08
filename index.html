@@ -271,7 +271,7 @@ header.topbar { background: transparent; }   /* 얼음빛이 머리줄 뒤로 �
 .navlink:hover { background: var(--surface-2); color: var(--ink); }
 .navlink:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
-/* 찾아가는 AX-A/S 신청 — 지금 눌러야 할 사람이 따로 있는 메뉴입니다.
+/* 주황 채움 메뉴 — 지금 가장 먼저 눌러야 할 신청 하나(성과공유회 신청 기간에는 성과공유회, 끝나면 A/S).
    테두리형 메뉴들 사이에서 유일하게 '채움'으로 두어 먼저 눈에 들어오게 하고,
    미션 제출 CTA(브랜드 네이비)와는 색 계열을 달리해 둘이 서로를 잡아먹지 않게 했습니다.
    히트맵의 마감임박 노랑(#fab219)보다 붉고 어두워 데이터 색과도 헷갈리지 않습니다. */
@@ -292,8 +292,8 @@ header.topbar { background: transparent; }   /* 얼음빛이 머리줄 뒤로 �
 :root[data-theme="dark"] .navlink.accent:hover { background: #ffa94d; color: #2b1400; }
 :root[data-theme="dark"] .navlink.accent:focus-visible { outline-color: #ff922b; }
 
-/* 성과공유회 참가 신청 — 날짜가 정해진 행사라 일반 메뉴보다 한 단계 위에 둡니다.
-   '채움'은 A/S 하나만 쓰는 규칙을 지켜, 브랜드 네이비 테두리와 옅은 바탕으로만 구분합니다 */
+/* 두 번째 신청 메뉴(지금은 찾아가는 AX-A/S) — 일반 메뉴보다 한 단계 위.
+   '채움'은 하나만 쓰는 규칙을 지켜, 브랜드 네이비 테두리와 옅은 바탕으로만 구분합니다 */
 .navlink.brand {
   border-color: color-mix(in srgb, var(--brand) 45%, var(--border));
   background: color-mix(in srgb, var(--brand) 8%, var(--surface));
@@ -355,7 +355,7 @@ header.topbar { background: transparent; }   /* 얼음빛이 머리줄 뒤로 �
   .navlink.accent { order: 2; flex: 1 1 100%; justify-content: center; height: 42px; }
   /* 성과공유회 신청이 열려 있으면 A/S 와 둘째 줄을 나눠 씁니다 — 둘 다 지금 눌러야 할 행동이고,
      셋째 줄(성과공유회 칩·만족도 조사·동작 방식)이 넘쳐 넷째 줄이 생기지 않게 합니다 */
-  .topbar-in:has(#showcaseLink) .navlink.accent { flex: 1 1 calc(100% - 132px); }
+  .topbar-in:has(.navlink.brand) .navlink.accent { flex: 1 1 calc(100% - 140px); }
   .navlink.brand { order: 2; flex: none; justify-content: center; height: 42px; }
   .chips, .navlink:not(.accent):not(.brand) { order: 3; }
   /* 섹션 바: 탭은 옆으로 밀어 보고(끝을 흐려 더 있음을 알림), 제출 버튼은 짧은 이름 + D-day */
@@ -864,10 +864,10 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
     </div>
     <div class="chips" id="topChips"></div>
 
-    <a class="navlink accent" id="asLink" target="_blank" rel="noopener noreferrer"
-       title="담당자가 부서로 찾아가 1:1로 도와드립니다 · 로그인 없이 신청할 수 있습니다">🛠 찾아가는 AX-A/S 신청</a>
-    <a class="navlink brand" id="showcaseLink" target="_blank" rel="noopener noreferrer"
+    <a class="navlink accent" id="showcaseLink" target="_blank" rel="noopener noreferrer"
        title="10/30(금) 성과공유회 참석 신청 · 로그인 없이 신청하면 확인 메일이 갑니다">🗓 <span class="long">성과공유회 참석 신청</span><span class="short">공유회 신청</span></a>
+    <a class="navlink brand" id="asLink" target="_blank" rel="noopener noreferrer"
+       title="담당자가 부서로 찾아가 1:1로 도와드립니다 · 로그인 없이 신청할 수 있습니다">🛠 <span class="long">찾아가는 AX-A/S 신청</span><span class="short">AX-A/S 신청</span></a>
     <a class="navlink" id="surveyLink" target="_blank" rel="noopener noreferrer"
        title="AI 교육 만족도 조사 현황 보기 (학교 구글 계정 로그인 필요)">📝 <span class="long">교육 만족도 조사 현황</span><span class="short">만족도 조사</span></a>
     <a class="navlink" href="how-it-works.html"
@@ -2315,9 +2315,11 @@ async function init() {
   const as = $("#asLink");
   if (CONFIG.AS_FORM_URL) as.href = CONFIG.AS_FORM_URL; else as.remove();
 
-  // 성과공유회 참가 신청 — 폼 주소가 있고 행사일이 지나지 않았을 때만 보입니다
+  // 성과공유회 참석 신청 — 폼 주소가 있고 행사일이 지나지 않았을 때만 보입니다.
+  // 신청 기간에는 성과공유회가 주황(채움)·맨 앞이고, 행사가 끝나 메뉴가 사라지면 A/S 가 다시 주황이 됩니다.
   const sc = $("#showcaseLink");
-  if (showcaseOpen()) sc.href = CONFIG.SHOWCASE_FORM_URL; else sc.remove();
+  if (showcaseOpen()) sc.href = CONFIG.SHOWCASE_FORM_URL;
+  else { sc.remove(); if (as.isConnected) as.classList.replace("brand", "accent"); }
 
   // 공개 배포에서는 이름 마스킹을 항상 켠 채로 잠급니다
   if (FORCE_MASK) {
