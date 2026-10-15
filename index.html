@@ -1003,7 +1003,7 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
   <section id="sec-lb">
     <div class="sec-head">
       <h2>참여 리더보드</h2>
-      <p>제출 10점 · 부서 스터디 운영 5점 · 함께한 동료 1명당 1점</p>
+      <p>100점 만점 · 제출 8점 · 부서 스터디 운영 2점 · 함께한 동료 1명당 2점(최대 20점) · 마감 후 제출 −2점 · 링크 없는 제출 −4점</p>
       <span class="sample-tag" data-sample hidden>샘플 데이터</span>
     </div>
     <div class="card filters" style="margin-bottom:12px">
@@ -1089,6 +1089,10 @@ const CONFIG = {
              (가상의 미제출·이탈위험 기록이 실명 옆에 붙어 실제 기록으로 오해되는 것을 막기 위함) */
 const HAS_SHEETS = !!(CONFIG.PARTICIPANTS_CSV && CONFIG.SUBMISSIONS_CSV);
 let MODE = HAS_SHEETS ? "real" : "roster";
+
+/* 리더보드 배점 — 100점 만점(제출 8×8=64 + 부서 스터디 2×8=16 + 동료 최대 20)
+   감점: 마감일이 지난 뒤 처음 낸 회차, 제출링크 칸에 주소가 없는 회차. 0점 아래로는 내려가지 않습니다. */
+const SCORE = { perSubmit: 8, perDeptStudy: 2, perPeer: 2, peerCap: 20, latePenalty: 2, noLinkPenalty: 4 };
 
 /* ============================================================
    2. 미션 정의 — 운영 일정 안내 문서의 8개 과제를 그대로 내장
@@ -1418,6 +1422,7 @@ function computeAll() {
      · 같은 회차를 여러 번 제출하면 가장 나중 타임스탬프를 채택합니다(최종 제출 인정).
        재제출은 대개 수정본이므로, 시트 행 순서가 아니라 제출 시각으로 판단합니다. */
   const byName = new Map();
+  const firstTs = new Map();                       // 이름|회차 → 첫 제출 시각(마감 후 제출 판정용 — 재제출이 늦어도 감점하지 않음)
   const rosterKeys = new Set(STATE.participants.map(p => nameKey(p.name)));
   const unmatched = new Map();                     // 명단에 없는 이름으로 들어온 제출
   STATE.submissions.forEach(s => {
@@ -1428,6 +1433,8 @@ function computeAll() {
       return;
     }
     if (!byName.has(key)) byName.set(key, new Map());
+    const fk = key + "|" + s.round;
+    if (s.ts && (!firstTs.has(fk) || s.ts < firstTs.get(fk))) firstTs.set(fk, s.ts);
     const mp = byName.get(key);
     const prev = mp.get(s.round);
     // 시각을 해석하지 못한 건은 시각이 있는 건을 밀어내지 않습니다
@@ -1452,7 +1459,21 @@ function computeAll() {
     const rate = passedCount ? pct(doneInPassed, passedCount) : null;
     const deptStudyCount = [...subs.values()].filter(s => isYes(s.deptStudy)).length;
     const peerMax = [...subs.values()].reduce((a, s) => Math.max(a, Number(s.peers) || 0), 0);
-    const score = doneTotal * 10 + deptStudyCount * 5 + peerMax;
+    // 100점 만점 — 제출 8점×8 + 부서 스터디 2점×8 + 동료 2점(최대 20점), 마감 후 제출·링크 없는 제출은 감점
+    const lateRounds = missions.filter(m => {
+      const t = firstTs.get(nameKey(p.name) + "|" + m.round);
+      return subs.has(m.round) && t && dayDiff(t, m.dueDate) > 0;
+    }).map(m => m.round);
+    const noLinkRounds = missions.filter(m => subs.has(m.round) && !/^https?:\/\/\S+\.\S+/i.test(subs.get(m.round).link || ""))
+                                 .map(m => m.round);
+    const pts = {
+      submit: doneTotal * SCORE.perSubmit,
+      dept: Math.min(deptStudyCount, MISSIONS.length) * SCORE.perDeptStudy,
+      peer: Math.min(peerMax * SCORE.perPeer, SCORE.peerCap),
+      late: lateRounds.length * SCORE.latePenalty,
+      noLink: noLinkRounds.length * SCORE.noLinkPenalty
+    };
+    const score = Math.max(0, pts.submit + pts.dept + pts.peer - pts.late - pts.noLink);
 
     // 이탈 위험: 마감 지난 최근 2개 회차 연속 미제출 (마감 2회차 미만이면 판정 보류)
     const lastTwo = missions.filter(m => m.phase === "past").slice(-2);
@@ -1463,7 +1484,7 @@ function computeAll() {
     if (doneTotal === MISSIONS.length) badges.push({ t: "올클리어", c: "g" });
     if (peerMax >= 5) badges.push({ t: "확산 " + peerMax + "명", c: "b" });
 
-    return { ...p, cells, subs, doneInPassed, doneTotal, rate, deptStudyCount, peerMax, score, atRisk, badges,
+    return { ...p, cells, subs, doneInPassed, doneTotal, rate, deptStudyCount, peerMax, score, pts, lateRounds, noLinkRounds, atRisk, badges,
              missedRounds: lastTwo.filter(m => !subs.has(m.round)).map(m => m.round) };
   });
 
@@ -1944,7 +1965,11 @@ function openDrawer(r, D) {
     </div>
     <div style="font-size:12.5px;color:var(--muted);margin-top:10px">
       ${D.passedCount ? `마감 지난 ${D.passedCount}회차 중 ${r.doneInPassed}회 제출` : "마감된 회차 없음"}
-      · 제출 ${r.doneTotal}건 · 누적 점수 ${r.score}점</div>
+      · 제출 ${r.doneTotal}건 · 누적 점수 ${r.score}점 / 100점</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px">
+      제출 ${r.pts.submit} + 부서 스터디 ${r.pts.dept} + 동료 ${r.pts.peer}${
+        r.pts.late ? ` − 마감 후 제출 ${r.pts.late}(${r.lateRounds.join("·")}회차)` : ""}${
+        r.pts.noLink ? ` − 링크 없음 ${r.pts.noLink}(${r.noLinkRounds.join("·")}회차)` : ""}</div>
     <div class="d-list">
       ${r.cells.map(c => {
         const s = c.sub;
