@@ -710,6 +710,27 @@ section[id] { scroll-margin-top: 64px; }
 .ok-note { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
 .ok-note .ic { color: var(--good); }
 
+/* ---------- 성과공유회 발표자 ---------- */
+.speakers { padding: 14px 16px; }
+.speakers .sp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.speakers .tag { font-size: 12px; font-weight: 700; color: var(--brand-ink); background: color-mix(in srgb, var(--brand) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.speakers .meta { font-size: var(--fs-sm); color: var(--ink-2); flex: 1 1 220px; }
+.speakers .lbtn { margin-left: auto; white-space: nowrap; }
+.sp-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.sp-list li { display: grid; grid-template-columns: 58px minmax(130px, 220px) 1fr; gap: 10px; align-items: center;
+  padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: 13.5px; }
+.sp-slot { font-weight: 700; color: var(--brand-ink); text-align: center; font-variant-numeric: tabular-nums; }
+.sp-who b { font-weight: 650; }
+.sp-dept { color: var(--muted); font-size: 12px; }
+.sp-title { min-width: 0; }
+.sp-slot.tbd, .sp-title.tbd { color: var(--muted); font-weight: 500; }
+@media (max-width: 640px) {
+  .sp-list li { grid-template-columns: 52px 1fr; }
+  .sp-title { grid-column: 2; }
+  .speakers .lbtn { margin-left: 0; flex: 1 1 100%; justify-content: center; }
+}
+
 /* ---------- 리더보드 ---------- */
 .lb { padding: 6px 0 8px; }
 .lb-row {
@@ -906,6 +927,11 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
     <div class="press" id="pressBox"></div>
   </section>
 
+  <!-- ⓪-1 성과공유회 발표자 — PRESENTERS_CSV 가 비었거나 행사일이 지나면 JS가 섹션째 숨깁니다 -->
+  <section id="speakerSec" hidden>
+    <div class="card speakers" id="speakerBox"></div>
+  </section>
+
   <div class="simbar" id="simbar" hidden>
     <label for="simRange">시점 시뮬레이션</label>
     <input type="range" id="simRange" min="0" max="67" value="42">
@@ -1079,6 +1105,11 @@ const CONFIG = {
   PLEDGE_PDF      : "AI-자율스터디-보안-서약서.pdf",
   PLEDGE_FORM     : "https://docs.google.com/forms/d/e/1FAIpQLSfk6IJ9XT0Eyc2BFT-WO5L3GEUgPMk6IgBz7oQVlwJjaGA6IQ/viewform",
   PLEDGE_CSV      : "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&gid=836603119",
+  // 성과공유회 발표자 — 「발표자」 탭(발표자제출_setup.gs 가 만듦)에는 순서·소속·가린 이름·발표 제목만 둡니다.
+  //  형식·시간·장비·자료 링크는 공유하지 않는 별도 응답 시트에만 있습니다(이 시트는 링크 공개라서).
+  //  탭이 없거나 비면 카드가 숨고, 행사일이 지나면 저절로 숨습니다.
+  PRESENTERS_CSV  : "https://docs.google.com/spreadsheets/d/1YCycv99P_M8DGI6bHcStGk-AMSycYCKT-qOilKqpUko/gviz/tq?tqx=out:csv&sheet=%EB%B0%9C%ED%91%9C%EC%9E%90",
+  PRESENTER_FORM_URL: "https://docs.google.com/forms/d/e/1FAIpQLSe5EAZuY8u5MEOiKwF0MSHA50n0X1LWCr7IKS_bmH0A9Crx6Q/viewform",   // 발표 내용 제출 폼 — setUpPresenterForm 실행 로그의 주소를 넣으면 카드에 제출 버튼이 생깁니다
   IMMINENT_DAYS   : 3     // 마감 N일 이내면 '임박'
 };
 
@@ -1366,7 +1397,7 @@ function csvToObjects(text) {
    5. 상태
    ============================================================ */
 const STATE = {
-  participants: [], submissions: [], pledges: [],
+  participants: [], submissions: [], pledges: [], presenters: [],
   today: null, lastFetch: null,
   hideNames: false,                 // 공개 화면용 이름 마스킹 (미리보기 모드에서는 강제 적용)
   filters: { dept: "", sort: "no", name: "", riskOnly: false },
@@ -1525,7 +1556,7 @@ function render() {
   const D = computeAll();
   renderMode(D);
   renderTop(D); renderKPI(D); renderHeatmap(D); renderTable(D);
-  renderMissions(D); renderEdu(); renderPress(); renderPledge(D); renderRisk(D); renderLeaderboard(D);
+  renderMissions(D); renderEdu(); renderPress(); renderSpeakers(); renderPledge(D); renderRisk(D); renderLeaderboard(D);
   document.querySelectorAll("[data-sample]").forEach(t => t.hidden = (MODE !== "preview"));
   $("#footUpdated").textContent =
     MODE === "preview" ? "샘플(가상) 활동 데이터 · 시뮬레이션 시점 " + fmtFull(STATE.today)
@@ -1576,6 +1607,41 @@ function renderPress() {
         PRESS_NOTE ? `<span class="note"> · ${esc(PRESS_NOTE)}</span>` : ""}</span>
       <div class="outlets">${PRESS.map(link).join("")}</div>
     </div>`;
+  sec.hidden = false;
+}
+
+/* 성과공유회 발표자 카드 — 순서·소속·가린 이름·발표 제목만(공개 화면).
+   희망 순서가 겹치면 '조율 중'으로 표시합니다. 이름은 시트에 이미 가려져 들어옵니다. */
+const SLOT_RANK = { "1번": 1, "2번": 2, "3번": 3, "4번": 4, "마지막": 9 };
+function speakerList() {
+  const list = (STATE.presenters || []).slice();
+  const count = {};
+  list.forEach(p => { if (p.slot) count[p.slot] = (count[p.slot] || 0) + 1; });
+  return list.map(p => ({ ...p, clash: !!p.slot && p.slot !== "마지막" && count[p.slot] > 1 }))
+             .sort((a, b) => (SLOT_RANK[a.slot] || 8) - (SLOT_RANK[b.slot] || 8));
+}
+function renderSpeakers() {
+  const sec = $("#speakerSec");
+  const list = speakerList();
+  if (MODE !== "real" || !list.length || dayDiff(parseDate(CONFIG.SHOWCASE_DATE), STATE.today) < 0) { sec.hidden = true; return; }
+  const d = parseDate(SHOWCASE.date);
+  const wd = ["일","월","화","수","목","금","토"][d.getDay()];
+  const done = list.filter(p => p.title).length;
+  $("#speakerBox").innerHTML = `
+    <div class="sp-head">
+      <span class="tag"><span aria-hidden="true">🎤</span> 성과공유회 발표자</span>
+      <span class="meta">${fmtMD(d)}(${wd}) ${esc(SHOWCASE.time.split("~")[0].trim())} · ${esc(SHOWCASE.place)} · 발표 내용 ${done}/${list.length}명 제출</span>
+      ${CONFIG.PRESENTER_FORM_URL ? `<a class="lbtn" href="${esc(CONFIG.PRESENTER_FORM_URL)}" target="_blank" rel="noopener noreferrer">발표자 · 발표 내용 제출 <span aria-hidden="true">↗</span></a>` : ""}
+    </div>
+    <ol class="sp-list">
+      ${list.map(p => `
+        <li>
+          <span class="sp-slot${p.slot ? "" : " tbd"}">${p.slot === "마지막" ? "마지막" : p.slot ? esc(p.slot) : "미정"}</span>
+          <span class="sp-who"><b>${esc(p.name)}</b> <span class="sp-dept">${esc(p.dept)}</span></span>
+          <span class="sp-title${p.title ? "" : " tbd"}">${p.title ? esc(p.title) : "발표 내용 준비 중"}${
+            p.clash ? ' <span class="badge" title="희망 순서가 겹쳐 담당자가 조율합니다">순서 조율 중</span>' : ""}</span>
+        </li>`).join("")}
+    </ol>`;
   sec.hidden = false;
 }
 
@@ -2017,6 +2083,17 @@ function openShowcase() {
             <span class="me">${esc(t)} · ${esc(dur)}</span>
           </span></div>`).join("")}
     </div>
+    ${speakerList().length ? `
+    <div style="font-size:12.5px;color:var(--muted);margin-top:14px">우수 사례 발표 순서</div>
+    <div class="d-list" style="margin-top:4px">
+      ${speakerList().map(p => `
+        <div class="d-item">
+          <span class="st lg-open" style="font-size:10px">${p.slot === "마지막" ? "끝" : p.slot ? esc(p.slot.replace("번", "")) : "?"}</span>
+          <span class="bd">
+            <span class="ti">${p.title ? esc(p.title) : "발표 내용 준비 중"}</span>
+            <span class="me">${esc(p.dept)} ${esc(p.name)}${p.clash ? " · 순서 조율 중" : ""}</span>
+          </span></div>`).join("")}
+    </div>` : ""}
     <div class="ok-note" style="margin-top:14px"><span class="ic">ℹ</span> ${esc(SHOWCASE.prep)}</div>
     ${showcaseOpen() ? `
     <a class="cta" href="${esc(CONFIG.SHOWCASE_FORM_URL)}" target="_blank" rel="noopener noreferrer"
@@ -2175,6 +2252,21 @@ async function loadReal() {
           .filter(x => x.name);
       }
     } catch (_) { /* 서약 현황만 비게 두고 진행 */ }
+  }
+
+  // 성과공유회 발표자 — 실패해도 본체는 계속(카드만 숨김)
+  if (CONFIG.PRESENTERS_CSV) {
+    try {
+      const r = await fetch(CONFIG.PRESENTERS_CSV, { cache: "no-store" });
+      const t = await r.text();
+      // 「발표자」 탭이 아직 없으면 gviz 가 첫 탭을 대신 돌려줍니다 — 머리행으로 진짜 그 탭인지 확인
+      const head = (parseCSV(t.replace(/^﻿/, ""))[0] || []).map(normHeader);
+      if (r.ok && !/^\s*</.test(t) && head.includes("발표제목") && head.includes("순서")) {
+        STATE.presenters = csvToObjects(t)
+          .map(o => ({ slot: o["순서"] || "", dept: o["부서"] || "", name: o["이름"] || "", title: o["발표제목"] || "" }))
+          .filter(x => x.name);
+      }
+    } catch (_) { STATE.presenters = []; }
   }
 }
 
