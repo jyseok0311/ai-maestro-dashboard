@@ -681,6 +681,7 @@ section[id] { scroll-margin-top: 64px; }
 .eres .ehead a { color: var(--brand-ink); white-space: nowrap; }
 .eres .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
 .eres .it { display: flex; flex-direction: column; gap: 4px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); min-width: 0; }
+.eres .it[hidden] { display: none; }
 .eres .it .top { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .eres .k { flex: none; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
            background: color-mix(in srgb, var(--brand) 12%, var(--surface)); color: var(--brand-ink); border: 1px solid color-mix(in srgb, var(--brand) 24%, transparent); }
@@ -690,6 +691,21 @@ section[id] { scroll-margin-top: 64px; }
 .eres .lk a { color: var(--brand-ink); text-decoration: none; } .eres .lk a:hover { text-decoration: underline; }
 @media (max-width: 700px) { .eres { padding: 6px 12px 14px; } .eres .grid { grid-template-columns: 1fr 1fr; } .erow .lbtn.res .lbl { display: none; } }
 @media (max-width: 420px) { .eres .grid { grid-template-columns: 1fr; } }
+.eres .more { display: block; width: 100%; margin-top: 10px; padding: 9px; border: 1px dashed var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--brand-ink); font: inherit; font-size: var(--fs-sm); font-weight: 620; cursor: pointer; }
+/* 휴대폰 — 결과물 버튼이 붙어 버튼이 셋이 되자 제목이 3줄로 꺾였습니다(375px).
+   버튼을 제목 아래 줄로 내리고, 결과물 카드는 한 줄짜리 목록으로 바꿔 70건을 펼쳐도 길어지지 않게 합니다 */
+@media (max-width: 520px) {
+  .erow { grid-template-columns: 46px minmax(0, 1fr); row-gap: 8px; align-items: start; }
+  .erow .acts { grid-column: 2; }
+  .eres .grid { gap: 6px; }
+  .eres .it { flex-direction: row; align-items: center; gap: 8px; padding: 8px 10px; }
+  .eres .it .top { flex: 1; }
+  .eres .it .nt { display: none; }
+  .eres .lk { margin: 0; padding: 0; flex: none; }
+  .eres .lk a { padding: 4px 2px; }
+  .eres .lk .t { display: none; }
+}
 
 /* (구) 교육 카드 잔여 스타일 — 미션 카드와 공유하는 요소들 */
 .ecard .rel {
@@ -1672,8 +1688,12 @@ fetch("edu_results.json", { cache: "no-store" }).then(r => r.ok ? r.json() : nul
   if (eduDrawn) { eduDrawn = false; renderEdu(); }       // 목록이 이미 그려졌으면 버튼을 붙여 다시 그림
 }).catch(() => {});
 // 글 제목이 실명이면 가린다(대시보드 다른 곳과 같은 원칙): '부서_홍길동' · '홍길동' → 홍*동
+// 패들렛은 첨부 파일 이름에서 한글을 지우므로(예: '보고서_2.hwp' → ' 2 ') 영문·숫자가 3자 이상 남은 경우만 제목 대신 씁니다
+const resTitle = it => it.who ? maskWho(it.who)
+  : ((it.file || "").replace(/[^A-Za-z0-9]/g, "").length >= 3 ? it.file.trim() : "제목 없는 " + (it.kind || "글"));
+const RES_FIRST = 12;                                       // 처음엔 12건만 — 나머지는 '더 보기'
 const maskWho = w => {
-  if (!w) return "이름 없음";
+  if (!w) return "";
   return w.replace(/(^|[_\s·-])([가-힣])([가-힣])([가-힣])$/, (m, p, a, b, c) => p + a + "*" + c);
 };
 function eduResPanel(n) {
@@ -1681,16 +1701,17 @@ function eduResPanel(n) {
   if (!s) return "";
   const card = it => `
     <div class="it">
-      <div class="top"><span class="k">${esc(it.kind || "글")}</span><span class="who">${esc(maskWho(it.who))}</span></div>
+      <div class="top"><span class="k">${esc(it.kind || "글")}</span><span class="who">${esc(resTitle(it))}</span></div>
       ${it.note ? `<div class="nt">${esc(it.note)}</div>` : ""}
       <div class="lk">
-        ${it.web ? `<a href="${esc(it.web)}" target="_blank" rel="noopener noreferrer">결과물 열기 ↗</a>` : ""}
-        ${it.post ? `<a href="${esc(it.post)}" target="_blank" rel="noopener noreferrer">패들렛 글 ↗</a>` : ""}
+        ${it.web ? `<a href="${esc(it.web)}" target="_blank" rel="noopener noreferrer" aria-label="결과물 열기"><span class="t">결과물 열기 </span>🔗</a>` : ""}
+        ${it.post ? `<a href="${esc(it.post)}" target="_blank" rel="noopener noreferrer" aria-label="패들렛 글 보기"><span class="t">패들렛 글 </span>↗</a>` : ""}
       </div>
     </div>`;
   return `<div class="ehead"><span>${n}차 교육에서 수강생이 올린 결과물 ${s.count}건 · 패들렛 기준(${esc(EDU_RES.updated)})</span>
             <a href="${esc(s.board)}" target="_blank" rel="noopener noreferrer">패들렛 전체 보기 ↗</a></div>
-          <div class="grid">${s.items.map(card).join("")}</div>`;
+          <div class="grid">${s.items.map((it, i) => i < RES_FIRST ? card(it) : card(it).replace('<div class="it">', '<div class="it" hidden>')).join("")}</div>
+          ${s.items.length > RES_FIRST ? `<button type="button" class="more">나머지 ${s.items.length - RES_FIRST}건 더 보기</button>` : ""}`;
 }
 
 function renderEdu() {
@@ -1727,7 +1748,11 @@ function renderEdu() {
       const p = el("div", "eres"); p.id = "eres-" + e.n; p.hidden = true; box.appendChild(p);
       const b = r.querySelector(".res");
       b.addEventListener("click", () => {
-        if (!p.innerHTML) p.innerHTML = eduResPanel(e.n);
+        if (!p.innerHTML) {
+          p.innerHTML = eduResPanel(e.n);
+          const m = p.querySelector(".more");
+          if (m) m.addEventListener("click", () => { p.querySelectorAll(".it[hidden]").forEach(x => x.hidden = false); m.remove(); });
+        }
         p.hidden = !p.hidden; b.setAttribute("aria-expanded", String(!p.hidden));
       });
     }
