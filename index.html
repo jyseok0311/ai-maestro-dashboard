@@ -1140,7 +1140,8 @@ const CONFIG = {
   // 성과공유회 참석 신청 웹앱 — axaura3 계정의 Apps Script 「AI 마에스트로 성과공유회 참석 신청」(8/19 배포).
   // 신청자에게 확인 메일, 담당자에게 하루 1회 요약 메일이 갑니다(로그인 없이 신청).
   // 비워 두면 메뉴가 나타나지 않고, 행사일(SHOWCASE_DATE)이 지나면 저절로 숨습니다.
-  SHOWCASE_FORM_URL : "https://script.google.com/macros/s/AKfycbys6p3dIgzhe-x_EWW6IiSTuMl24F_tFx0424BLlk_cGY-4oNPF9lhDC3y9zkFyikdV6g/exec",
+  //  10/20부터 같은 웹앱을 Vercel 화면(/apply/)으로 엽니다 — Apps Script 주소(/exec)는 위에 Google 안내 띠가 붙어서.
+  SHOWCASE_FORM_URL : "https://ai-maestro-showcase.vercel.app/apply/",
   // 보안 서약 — 검토 중이라 현재 숨김 상태입니다.
   //  ▶ 다시 켜려면 PLEDGE_ENABLED 를 true 로 바꾸고,
   //    서약서 PDF(AI-자율스터디-보안-서약서.pdf)를 저장소에 다시 올리세요.
