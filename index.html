@@ -475,6 +475,12 @@ section[id] { scroll-margin-top: 64px; }
   border-radius: 4px; background: linear-gradient(180deg, var(--crystal), var(--brand));
 }
 .sec-head p  { font-size: var(--fs-sm); margin: 0; color: var(--muted); }
+/* 미션 제출 결과물을 모아 보는 공연 페이지 쪽 「마에스트로의 흔적」 — 머리줄이 이미 붐벼(모바일 3줄) 섹션 머리 오른쪽에 둡니다 */
+.sec-head .traces-link { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 999px;
+  font-size: var(--fs-sm); font-weight: 650; text-decoration: none; color: var(--brand-ink); white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--brand) 40%, var(--border)); background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
+.sec-head .traces-link:hover { background: color-mix(in srgb, var(--brand) 16%, var(--surface)); }
+.sec-head .traces-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .card {
   background: var(--surface); border: 1px solid var(--border);
@@ -1028,6 +1034,8 @@ footer.foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--l
       <h2>미션별 제출 현황</h2>
       <p>총 8개 과제 · 마감일 기준</p>
       <span class="sample-tag" data-sample hidden>샘플 데이터</span>
+      <a class="traces-link" href="https://ai-maestro-showcase.vercel.app/concert/traces.html" target="_blank" rel="noopener noreferrer"
+         title="마에스트로들이 미션마다 낸 결과물을 악보처럼 모아 보는 페이지">🎼 마에스트로의 흔적 보기 ↗</a>
     </div>
     <div class="missions" id="missions"></div>
   </section>
